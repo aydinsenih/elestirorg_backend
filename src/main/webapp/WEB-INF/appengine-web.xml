@@ -10,10 +10,10 @@
   </automatic-scaling>
   <system-properties> <property name="java.util.logging.config.file" value="WEB-INF/logging.properties" /> </system-properties>
   <env-variables>
-    <env-var name="DB_USER" value="root" />
-    <env-var name="DB_PASS" value="root" />
-    <env-var name="secret" value="SNHAI69gJRPyR+tjdeeHK22Ay3BHqrFbfS9eu2MI7drFsEnFVpXdoz0+jadNEKgvYHlF7ujBSN6hVJUzlIkxQA==" />
-    <env-var name="cloudsql" value="jdbc:mysql://google/elestirorgdb?cloudSqlInstance=elestirorg:us-west1:elestirdb&amp;socketFactory=com.google.cloud.sql.mysql.SocketFactory&amp;useSSL=false&amp;user=root&amp;password=root" />
-    <env-var name="localsql" value="jdbc:mysql://127.0.0.1:3306/elestirorgdb" />
+    <env-var name="DB_USER" value="user" />
+    <env-var name="DB_PASS" value="pass" />
+    <env-var name="secret" value="SNHAI69gJRSNHAI69gJRSNHAI69gJRSNHAI69gJR7daFsEnFVpXdoz0+jadNEKgvYHlF7ujBSN6hVJUzlIkxQA==" />
+    <env-var name="cloudsql" value="jdbc:mysql://google/dbname?cloudSqlInstance=instancename&amp;socketFactory=com.google.cloud.sql.mysql.SocketFactory&amp;useSSL=false&amp;user=user&amp;password=pass" />
+    <env-var name="localsql" value="jdbc:mysql://127.0.0.1:3306/dbname" />
   </env-variables>
 </appengine-web-app>
