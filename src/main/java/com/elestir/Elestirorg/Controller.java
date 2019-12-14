@@ -1,6 +1,7 @@
 package com.elestir.Elestirorg;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.http.HttpStatus;
@@ -34,17 +35,22 @@ public class Controller {
         return prefix + jws;
     }
 
-    private boolean validateToken(String token){
+    private String validateToken(String token){
         if(token == null || !token.startsWith(prefix)){
-            return false;
+            return null;
         }
+        Claims claims;
         String jwtToken = token.replace(prefix, "");
         try{
-            Claims claims = Jwts.parser()
+            claims = Jwts.parser()
                     .setSigningKey(key)
                     .parseClaimsJws(jwtToken)
                     .getBody();
-            //
+
+            return claims.toString();
+        }
+        catch (JwtException e){
+            return null;
         }
     }
 
@@ -60,19 +66,25 @@ public class Controller {
                      @RequestHeader(value = "password",required = false) String password){
         if(username == null || password == null){
             return ResponseEntity.badRequest().body("missing header(s)");
-            //return new ArrayList(Arrays.asList("missing header(s)"));
         }
         //db connection
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.login(username,password);
         if(resultList.isEmpty()){
-            return ResponseEntity.ok().body("email or password error");
+            return ResponseEntity.ok().body("Email or password error");
             //return new ArrayList(Arrays.asList("email or password error"));
         }
         if (resultList.size() > 1){
-            return ResponseEntity.ok().body("multiple account detected!");
+            return ResponseEntity.ok().body("Error! Multiple account detected!");
         }
-        return ResponseEntity.ok().body(resultList.get(0));
+        HashMap resultMap = (HashMap) resultList.get(0);
+        if(resultMap.get("token") == null || validateToken(resultMap.get("token").toString()) == null){
+            conn.updateTokenForUser(resultMap.get("username")
+                    ,createToken(resultMap.get("username").toString()
+                    ,resultMap.get("ID").toString()
+                    ,resultMap.get("email").toString()));
+        }
+        return ResponseEntity.ok().body(resultMap.remove("password").toString());
     }
 
     @RequestMapping(value = "/signup", method = RequestMethod.POST, produces = "application/json")
