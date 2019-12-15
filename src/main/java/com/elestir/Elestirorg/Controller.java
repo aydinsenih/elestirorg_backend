@@ -17,7 +17,7 @@ import io.jsonwebtoken.security.Keys;
 
 @RestController
 public class Controller {
-    String secretkey= System.getenv("secret");
+    String secretkey = System.getenv("secret");
     private final Key key = Keys.hmacShaKeyFor(secretkey.getBytes());//Keys.secretKeyFor(SignatureAlgorithm.HS512);//https://stackoverflow.com/questions/40252903/static-secret-as-byte-key-or-string
     private final String prefix = "Bearer ";
     private final String issuer = "elestir.org";
@@ -57,6 +57,7 @@ public class Controller {
 
     @GetMapping
     public String welcome(){
+
         return "Elestirorg API";
     }
 
@@ -65,26 +66,38 @@ public class Controller {
                      @RequestHeader(value = "username", required = false) String username,
                      @RequestHeader(value = "password",required = false) String password){
         if(username == null || password == null){
-            return ResponseEntity.badRequest().body("missing header(s)");
+            return ResponseEntity.badRequest().body("missing header(s).");
         }
         //db connection
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.login(username,password);
+        if (resultList == null){    //when sql connection error.
+            return ResponseEntity.ok().body("sql connection error.");
+        }
         if(resultList.isEmpty()){
-            return ResponseEntity.ok().body("Email or password error");
+            return ResponseEntity.ok().body("Email or password error.");
             //return new ArrayList(Arrays.asList("email or password error"));
         }
         if (resultList.size() > 1){
             return ResponseEntity.ok().body("Error! Multiple account detected!");
         }
         HashMap resultMap = (HashMap) resultList.get(0);
+        String newToken;
         if(resultMap.get("token") == null || validateToken(resultMap.get("token").toString()) == null){
-            conn.updateTokenForUser(resultMap.get("username")
-                    ,createToken(resultMap.get("username").toString()
+            newToken = createToken(resultMap.get("username").toString()
                     ,resultMap.get("ID").toString()
-                    ,resultMap.get("email").toString()));
+                    ,resultMap.get("email").toString());
+            List updateTokenResult = conn.updateTokenForUser(resultMap.get("username").toString(),newToken);
+            if (!updateTokenResult.get(0).toString().equals(username)){
+                return ResponseEntity.ok().body("sql connection error. Could not update/create token.");
+            }
+            resultMap.put("token", newToken);
         }
-        return ResponseEntity.ok().body(resultMap.remove("password").toString());
+        resultMap.remove("password");
+        resultMap.remove("hasPermission");
+        resultMap.remove("ID");
+
+        return ResponseEntity.ok().body(resultMap.toString());//TODO : test required.
     }
 
     @RequestMapping(value = "/signup", method = RequestMethod.POST, produces = "application/json")
@@ -93,18 +106,25 @@ public class Controller {
                                         @RequestHeader(value = "password",required = false) String password,
                                         @RequestHeader(value = "phonenumber",required = false) String phoneNumber){
         if(email==null || username == null || password == null || phoneNumber == null){
-            return ResponseEntity.badRequest().body("missing header.");
+            return ResponseEntity.badRequest().body("missing header(s).");
         }
         StringController strController = new StringController();
-        if(strController.isNumeric(phoneNumber)){
+
+        if(!strController.isNumeric(phoneNumber)){
             return ResponseEntity.badRequest().body("phone number invalid.");
         }
-        if(strController.isEmailValid(email)){
+        if(!strController.isEmailValid(email)){
             return ResponseEntity.badRequest().body("email invalid.");
         }
 
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.signup(username, email, password, phoneNumber);
-        return ResponseEntity.ok().body("cikis");
+        if (resultList == null){
+            return ResponseEntity.ok().body("sql connection error. Signup could not complete");
+        }
+        if (!resultList.get(0).toString().equals(username)){
+            return ResponseEntity.ok().body(resultList.toString());
+        }
+        return ResponseEntity.ok().body(resultList.toString());
     }
 }

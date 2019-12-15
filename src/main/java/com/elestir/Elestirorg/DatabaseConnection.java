@@ -33,10 +33,10 @@ public class DatabaseConnection {
     protected List login(String username, String password){
         final String LOGIN_QUERY = "SELECT * FROM users WHERE username= ? AND password= ?";
         if(!dbConnection()){
-            return new ArrayList(Arrays.asList("sql connection error."));
+            return null;//if connection error occur.
             }
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
+        PreparedStatement preparedStatement;
+        ResultSet resultSet;
         try {
             preparedStatement = conn.prepareStatement(LOGIN_QUERY);
             preparedStatement.setString(1, username);
@@ -47,23 +47,23 @@ public class DatabaseConnection {
             int columns = md.getColumnCount();
             ArrayList list = new ArrayList();
             while (resultSet.next()){
-                HashMap hasmap = new HashMap(columns);
+                HashMap hashmap = new HashMap(columns);
                 for(int i=1; i<=columns ; ++i){
-                    hasmap.put(md.getColumnName(i), resultSet.getObject(i));
+                    hashmap.put(md.getColumnName(i), resultSet.getObject(i));
                 }
-                list.add(hasmap);
+                list.add(hashmap);
             }
             return list;
         } catch (SQLException e) {
             e.printStackTrace();
-            return new ArrayList(Arrays.asList("sql connection error."));
+            return null;//if connection error occur.
         } finally { //connection close
             if(conn != null){
                 try {
                     conn.close();
                 } catch (SQLException e) {
                     e.printStackTrace();
-                    return new ArrayList(Arrays.asList("sql connection error."));
+                    //return null;//if connection error occur.
                 }
             }
         }
@@ -72,13 +72,13 @@ public class DatabaseConnection {
     protected List signup(String username, String email, String password, String phonenumber){
         final String USERNAME_EMAIL_CHECK_QUERY = "SELECT * FROM users WHERE email= ? OR username= ?";
         final String SIGNUP_QUERY = "INSERT INTO users(username, email, password, phoneNumber, hasPermission) VALUES ( ?, ?, ?, ?, 1)";
-        PreparedStatement ps = null;
-        PreparedStatement ps2 = null;
-        ResultSet rs = null;
+        PreparedStatement ps;
+        PreparedStatement ps2;
+        ResultSet rs;
         int updateResult = -1;
 
         if(!dbConnection()){
-            return new ArrayList(Arrays.asList("sql connection error."));
+            return null;//if connection error occur. //new ArrayList(Arrays.asList("sql connection error."));
         }
 
         try {
@@ -97,11 +97,53 @@ public class DatabaseConnection {
             updateResult = ps2.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return null;//if connection error occur.
+                }
+            }
         }
         if(updateResult == 1)
-            return new ArrayList(Arrays.asList(email,username,"signup succesful"));
+            return new ArrayList(Arrays.asList(username,"signup succesful"));
         return new ArrayList(Arrays.asList("signup error"));
 
     }
 
+
+    public List updateTokenForUser(String username, String token) {
+        final String UPDATE_TOKEN_QUERY = "UPDATE users SET token = ? WHERE users.username = ?";
+        PreparedStatement ps;
+        int updateResult = -1;
+
+        if(!dbConnection()){
+            return new ArrayList(Arrays.asList("sql connection error."));
+        }
+
+        try {
+            ps = conn.prepareStatement(UPDATE_TOKEN_QUERY);
+            ps.setString(1, token);
+            ps.setString(2, username);
+            updateResult = ps.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return new ArrayList(Arrays.asList("sql connection error."));
+                }
+            }
+        }
+        if (updateResult == 1){
+            return new ArrayList(Arrays.asList(username,"token updated."));
+        }
+        return new ArrayList(Arrays.asList("token update error"));
+    }
 }

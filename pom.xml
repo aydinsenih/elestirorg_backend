@@ -69,7 +69,7 @@
 <!--			<scope>test</scope>-->
 <!--		</dependency>-->
 
-<!--		json parser-->
+<!--		json web token https://github.com/jwtk/jjwt-->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -87,7 +87,7 @@
 			<version>0.10.7</version>
 			<scope>runtime</scope>
 		</dependency>
-<!--		json parser end-->
+<!--		json web token end-->
 <!--		appengine api sdk-->
 		<dependency>
 			<groupId>com.google.appengine</groupId>
@@ -125,25 +125,8 @@
 			<groupId>com.google.cloud</groupId>
 			<artifactId>google-cloud-spanner</artifactId>
 		</dependency>
-<!--		json web token https://github.com/jwtk/jjwt-->
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-api</artifactId>
-			<version>0.10.7</version>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-impl</artifactId>
-			<version>0.10.7</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-jackson</artifactId>
-			<version>0.10.7</version>
-			<scope>runtime</scope>
-		</dependency>
-<!--		json web token end-->
+
+
 	</dependencies>
 
 	<build>
