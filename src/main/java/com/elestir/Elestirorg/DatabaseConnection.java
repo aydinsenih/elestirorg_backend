@@ -108,7 +108,7 @@ public class DatabaseConnection {
             }
         }
         if(updateResult == 1)
-            return new ArrayList(Arrays.asList(username,"signup succesful"));
+            return new ArrayList(Arrays.asList(username,"signup successful"));
         return new ArrayList(Arrays.asList("signup error"));
 
     }

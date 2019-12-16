@@ -1,12 +1,12 @@
 package com.elestir.Elestirorg;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.GsonBuilderUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Key;
@@ -65,21 +65,26 @@ public class Controller {
     public ResponseEntity userlogin(@RequestHeader(value = "accept-language", defaultValue = "en-us", required = false) String language,
                      @RequestHeader(value = "username", required = false) String username,
                      @RequestHeader(value = "password",required = false) String password){
+        ReturnBodyController rbc = new ReturnBodyController();
         if(username == null || password == null){
-            return ResponseEntity.badRequest().body("missing header(s).");
+            rbc.setStatus("Missing header(s).");
+            return ResponseEntity.badRequest().body(rbc.getReturnBodyAsJson());
         }
         //db connection
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.login(username,password);
         if (resultList == null){    //when sql connection error.
-            return ResponseEntity.ok().body("sql connection error.");
+            rbc.setStatus("SQL connection error.");
+            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
         }
         if(resultList.isEmpty()){
-            return ResponseEntity.ok().body("Email or password error.");
+            rbc.setStatus("Email or Password incorrect.");
+            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
             //return new ArrayList(Arrays.asList("email or password error"));
         }
         if (resultList.size() > 1){
-            return ResponseEntity.ok().body("Error! Multiple account detected!");
+            rbc.setStatus("Error! Multiple account detected!");
+            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
         }
         HashMap resultMap = (HashMap) resultList.get(0);
         String newToken;
@@ -89,7 +94,8 @@ public class Controller {
                     ,resultMap.get("email").toString());
             List updateTokenResult = conn.updateTokenForUser(resultMap.get("username").toString(),newToken);
             if (!updateTokenResult.get(0).toString().equals(username)){
-                return ResponseEntity.ok().body("sql connection error. Could not update/create token.");
+                rbc.setStatus("SQL connection error. Could not update or create token.");
+                return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
             }
             resultMap.put("token", newToken);
         }
@@ -97,7 +103,9 @@ public class Controller {
         resultMap.remove("hasPermission");
         resultMap.remove("ID");
 
-        return ResponseEntity.ok().body(resultMap.toString());//TODO : test required.
+        rbc.setReturnBody(resultMap);
+        rbc.setStatus("login success");
+        return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());//TODO : test required.
     }
 
     @RequestMapping(value = "/signup", method = RequestMethod.POST, produces = "application/json")
@@ -105,26 +113,35 @@ public class Controller {
                                         @RequestHeader(value = "username", required = false) String username,
                                         @RequestHeader(value = "password",required = false) String password,
                                         @RequestHeader(value = "phonenumber",required = false) String phoneNumber){
+        ReturnBodyController rbc = new ReturnBodyController();
         if(email==null || username == null || password == null || phoneNumber == null){
-            return ResponseEntity.badRequest().body("missing header(s).");
+            rbc.setStatus("Missing header(s).");
+            return ResponseEntity.badRequest().body(rbc.getReturnBodyAsJson());
         }
         StringController strController = new StringController();
 
         if(!strController.isNumeric(phoneNumber)){
-            return ResponseEntity.badRequest().body("phone number invalid.");
+            rbc.setStatus("Phone number invalid.");
+            return ResponseEntity.badRequest().body(rbc.getReturnBodyAsJson());
         }
         if(!strController.isEmailValid(email)){
-            return ResponseEntity.badRequest().body("email invalid.");
+            rbc.setStatus("Email invalid.");
+            return ResponseEntity.badRequest().body(rbc.getReturnBodyAsJson());
         }
 
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.signup(username, email, password, phoneNumber);
         if (resultList == null){
-            return ResponseEntity.ok().body("sql connection error. Signup could not complete");
+            rbc.setStatus("SQL connection error. Sign-up could not complete.");
+            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
         }
         if (!resultList.get(0).toString().equals(username)){
-            return ResponseEntity.ok().body(resultList.toString());
+            rbc.setStatus("Sign-up error.");
+            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
         }
-        return ResponseEntity.ok().body(resultList.toString());
+        rbc.setStatus("sign-up success");
+        rbc.put("username", username);
+        rbc.put("email" , email);
+        return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
     }
 }
