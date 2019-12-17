@@ -87,7 +87,7 @@ public class DatabaseConnection {
             ps.setString(2,username);
             rs = ps.executeQuery();
             if(rs.next()){
-                return new ArrayList(Arrays.asList("username or email in use."));
+                return new ArrayList(Arrays.asList("Username or Email in use."));
             }
             ps2 = conn.prepareStatement(SIGNUP_QUERY);
             ps2.setString(1, username);
@@ -108,19 +108,50 @@ public class DatabaseConnection {
             }
         }
         if(updateResult == 1)
-            return new ArrayList(Arrays.asList(username,"signup successful"));
-        return new ArrayList(Arrays.asList("signup error"));
+            return new ArrayList(Arrays.asList(username,"Sign-up successful"));
+        return new ArrayList(Arrays.asList("Sign-up error"));
 
+    }
+
+    public List logout(String token, String username){
+        final String DELETE_TOKEN_QUERY = "UPDATE users SET users.token = null WHERE users.username = ?";
+        PreparedStatement ps;
+        int deleteResult = -1;
+        if(!dbConnection()){
+            return new ArrayList(Arrays.asList("SQL connection error."));
+        }
+
+        try {
+            ps = conn.prepareStatement(DELETE_TOKEN_QUERY);
+            ps.setString(1,username);
+            deleteResult = ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return new ArrayList(Arrays.asList("sql connection error."));
+                }
+            }
+        }
+
+        if (deleteResult == 1){
+            return new ArrayList(Arrays.asList(username,"Logged-out."));
+        }
+        return new ArrayList(Arrays.asList("SQL connection error. Could not logged-out."));
     }
 
 
     public List updateTokenForUser(String username, String token) {
-        final String UPDATE_TOKEN_QUERY = "UPDATE users SET token = ? WHERE users.username = ?";
+        final String UPDATE_TOKEN_QUERY = "UPDATE users SET users.token = ? WHERE users.username = ?";
         PreparedStatement ps;
         int updateResult = -1;
 
         if(!dbConnection()){
-            return new ArrayList(Arrays.asList("sql connection error."));
+            return new ArrayList(Arrays.asList("SQL connection error."));
         }
 
         try {
@@ -144,6 +175,6 @@ public class DatabaseConnection {
         if (updateResult == 1){
             return new ArrayList(Arrays.asList(username,"token updated."));
         }
-        return new ArrayList(Arrays.asList("token update error"));
+        return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
     }
 }

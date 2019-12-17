@@ -21,7 +21,15 @@ public class ElestirorgApplication {
 
 		@Override
 		protected void configure(HttpSecurity http) throws Exception{
-			http.csrf().disable().anonymous().authorities("ROLE_ANONYMOUS").and().authorizeRequests().antMatchers(HttpMethod.POST, "/**").permitAll();
+//			http
+//					.csrf()
+//					.disable()
+//					.anonymous()
+//					.authorities("ROLE_ANONYMOUS")
+//					.and().authorizeRequests()
+//					.antMatchers(HttpMethod.POST, "/**")
+//					.permitAll();
+			http.csrf().disable().logout().permitAll().and().anonymous().and().authorizeRequests().antMatchers("/**").permitAll();
 		}
 	}
 
