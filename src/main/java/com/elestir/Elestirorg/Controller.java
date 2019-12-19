@@ -99,8 +99,6 @@ public class Controller {
             }
             resultMap.put("token", newToken);
         }
-        resultMap.remove("password");
-        resultMap.remove("hasPermission");
         resultMap.remove("ID");
         ReturnBodyController rbc = new ReturnBodyController();
         rbc.setReturnBody(resultMap);

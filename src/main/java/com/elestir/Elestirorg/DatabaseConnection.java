@@ -31,7 +31,7 @@ public class DatabaseConnection {
     }
 
     protected List login(String username, String password){
-        final String LOGIN_QUERY = "SELECT * FROM users WHERE username= ? AND password= ?";
+        final String LOGIN_QUERY = "SELECT ID, username, email, phoneNumber, avatar, token FROM users WHERE username= ? AND password= ?";
         if(!dbConnection()){
             return null;//if connection error occur.
             }
