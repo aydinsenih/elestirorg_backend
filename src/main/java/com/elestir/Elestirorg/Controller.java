@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,7 +55,7 @@ public class Controller {
         ReturnBodyController rbc = new ReturnBodyController();
         rbc.setStatus(rbc.FAILED);
         rbc.setMessage(message);
-        return rbc.getReturnBodyAsJson();
+        return rbc.getmBodyAsJson();
     }
 
 
@@ -100,11 +101,11 @@ public class Controller {
             resultMap.put("token", newToken);
         }
         resultMap.remove("ID");
-        ReturnBodyController rbc = new ReturnBodyController();
-        rbc.setReturnBody(resultMap);
+        ReturnBodyController rbc = new ReturnBodyController(resultMap);
+        //rbc.setReturnBody(resultMap);
         rbc.setStatus(rbc.SUCCESS);
         rbc.setMessage("login success");
-        return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
+        return ResponseEntity.ok().body(rbc.getmBodyAsJson());
     }
 
     @RequestMapping(value = "/signup", method = RequestMethod.POST, produces = "application/json")
@@ -140,7 +141,7 @@ public class Controller {
             rbc.setMessage("sign-up success");
 //            rbc.put("username", username);
 //            rbc.put("email" , email);
-            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
+            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
         }
         return ResponseEntity.ok().body(getErrorResponseAsJSON(resultList.get(0).toString()));
     }
@@ -151,26 +152,60 @@ public class Controller {
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
         String token = payload.get("token");
-        Claims claims = validateToken(payload.get("token"));
+
+        Claims claims = validateToken(token);
+
         if(claims == null){
             return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
         }
-        if(claims.getIssuer().equals(issuer)){
+        else{
             ReturnBodyController rbc = new ReturnBodyController();
             rbc.setStatus(rbc.SUCCESS);
 //            rbc.put("username",claims.getSubject());
-            return ResponseEntity.ok().body(rbc.getReturnBodyAsJson());
+            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+        }
+    }
+
+    @RequestMapping(value = "/createquestion", method = RequestMethod.POST, consumes = "application/json")
+    public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, String> payload){
+        if (payload == null){
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
+        }
+        String token = payload.get("token");
+        String title = payload.get("title");
+        String categoryID = payload.get("categoryID");
+
+        if(token==null || title == null || categoryID == null){
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
         }
 
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error. Token not valid."));
+        Claims claims = validateToken(token);
+
+        if (claims == null){
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
+        }
+        String userID = claims.get("userID").toString();
+        DatabaseConnection conn = new DatabaseConnection();
+        List resultList = conn.createQuestion(userID, title, categoryID);
+        if (resultList.get(0).toString().equals("success")){
+            ReturnBodyController rbc = new ReturnBodyController();
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not create question."));
     }
 
-
-    @RequestMapping(value = "/logoff", method = RequestMethod.GET, produces = "application/json", consumes = "application/json")
-    public ResponseEntity<String> logoff(@RequestBody(required = false) HashMap<String, String> payload){
-        return ResponseEntity.ok().body(payload.get("logged-out."));
+    @RequestMapping(value = "/getquestions", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<String> getQuestions(@RequestParam(value = "count",defaultValue = "5") int count,
+                                              @RequestParam(value = "offset",defaultValue = "0") int offset){
+        if(count - offset > 20){
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Can not provide more than 20 questions."));
+        }
+        DatabaseConnection conn = new DatabaseConnection();
+        List resultList = conn.getQuestions(count, offset);
+        ReturnBodyController rbc = new ReturnBodyController(resultList);
+        rbc.setStatus(rbc.SUCCESS);
+        return ResponseEntity.ok().body(rbc.getmBodyAsJson());
     }
-
-
 
 }

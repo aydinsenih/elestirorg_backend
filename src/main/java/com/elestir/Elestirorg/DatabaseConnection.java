@@ -177,4 +177,78 @@ public class DatabaseConnection {
         }
         return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
     }
+
+    public List createQuestion(String userID, String title, String categoryID){
+        final String CREATE_QUESTION_QUERY = "INSERT INTO questions(userID, title, CategoryID) VALUES (?, ?, ?)";
+        PreparedStatement ps;
+        int result = -1;
+
+        if(!dbConnection()){
+            return new ArrayList(Arrays.asList("SQL connection error."));
+        }
+        try {
+            ps = conn.prepareStatement(CREATE_QUESTION_QUERY);
+            ps.setString(1, userID);
+            ps.setString(2, title);
+            ps.setString(3, categoryID);
+            result = ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return new ArrayList(Arrays.asList("sql connection error."));
+                }
+            }
+        }
+
+        if (result == 1){
+            return new ArrayList(Arrays.asList("success","question created."));
+        }
+        return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
+    }
+
+    public List getQuestions(int count, int offset){
+        String GET_QUESTIONS_QUERY = "SELECT * from questions ORDER BY questions.ID DESC LIMIT ?,?";
+        PreparedStatement ps;
+        ResultSet rs;
+        if (!dbConnection()){
+            return new ArrayList(Arrays.asList("SQL connection error."));
+        }
+        ArrayList list = null;
+
+        try {
+            ps =conn.prepareStatement(GET_QUESTIONS_QUERY);
+            ps.setInt(1, offset);
+            ps.setInt(2, count);
+            rs = ps.executeQuery();
+
+            ResultSetMetaData md = rs.getMetaData();
+            int columns = md.getColumnCount();
+            list = new ArrayList();
+            while (rs.next()){
+                HashMap hashmap = new HashMap(columns);
+                for(int i=1; i<=columns ; ++i){
+                    hashmap.put(md.getColumnName(i), rs.getObject(i));
+                }
+                list.add(hashmap);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally { //connection close
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return null;//if connection error occur.
+                }
+            }
+        }
+        return list;
+    }
 }
