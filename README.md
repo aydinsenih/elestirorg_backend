@@ -1,10 +1,10 @@
 # elestirorg_backend
-elestirorg
+elestirorg API v0.1
 
 /login  method POST
 Params : "username", "password".
 
-Returns : JSON with "status" and "message"(if error occurred).
+Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /signup method POST
 Params : "email", "username", "password", "phoneNumber".
@@ -22,6 +22,13 @@ Params : "count", "offset". No Params required for last 5 questions.
 Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /createquestion method POST
-Params : "token", "title" , "categoryID".
+Params : "token", "question" , "category" , "answers".
+
+"answers" must be json as shown below
+ {"1":"some answer", "2":"some other answer"}
+ "answers" answers must be between 2 and 5 (2 and 5 include).
+ 
+ "category" must be one of the following
+ "Siyaset" , "Eglence" , "General"
 
 Returns : "status" and "message"(if error occurred).

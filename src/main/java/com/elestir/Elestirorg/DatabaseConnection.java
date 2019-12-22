@@ -178,8 +178,10 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
     }
 
-    public List createQuestion(String userID, String title, String categoryID){
-        final String CREATE_QUESTION_QUERY = "INSERT INTO questions(userID, title, CategoryID) VALUES (?, ?, ?)";
+    public List createQuestion(String userID, String question, String answers,String category){
+        //final String CREATE_QUESTION_QUERY = "INSERT INTO questions(userID, title, CategoryID) VALUES (?, ?, ?)";
+        final String CREATE_QUESTION_QUERY =  "INSERT INTO `questions`(`question`, `answers`, `userID`, `CategoryID`)" +
+                " VALUES (?, ?, ?,(SELECT CategoryID from category WHERE category.categoryName = ?))";
         PreparedStatement ps;
         int result = -1;
 
@@ -188,9 +190,10 @@ public class DatabaseConnection {
         }
         try {
             ps = conn.prepareStatement(CREATE_QUESTION_QUERY);
-            ps.setString(1, userID);
-            ps.setString(2, title);
-            ps.setString(3, categoryID);
+            ps.setString(1, question);
+            ps.setString(2, answers);
+            ps.setString(3, userID);
+            ps.setString(4, category);
             result = ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

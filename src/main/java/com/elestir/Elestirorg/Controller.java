@@ -4,7 +4,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,10 +51,10 @@ public class Controller {
     }
 
     public String getErrorResponseAsJSON(String message){
-        ReturnBodyController rbc = new ReturnBodyController();
+        ResponseBodyController rbc = new ResponseBodyController();
         rbc.setStatus(rbc.FAILED);
         rbc.setMessage(message);
-        return rbc.getmBodyAsJson();
+        return rbc.getResponseBodyAsJson();
     }
 
 
@@ -66,7 +65,7 @@ public class Controller {
     }
 
     @RequestMapping(value = "/login", method = RequestMethod.POST, produces = "application/json", consumes = "application/json")
-    public ResponseEntity userlogin(@RequestBody(required = false) HashMap<String, String> payload){
+    public ResponseEntity<String> userlogin(@RequestBody(required = false) HashMap<String, String> payload){
         if(payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
@@ -101,11 +100,11 @@ public class Controller {
             resultMap.put("token", newToken);
         }
         resultMap.remove("ID");
-        ReturnBodyController rbc = new ReturnBodyController(resultMap);
+        ResponseBodyController rbc = new ResponseBodyController(resultMap);
         //rbc.setReturnBody(resultMap);
         rbc.setStatus(rbc.SUCCESS);
         rbc.setMessage("login success");
-        return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+        return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
     }
 
     @RequestMapping(value = "/signup", method = RequestMethod.POST, produces = "application/json")
@@ -136,12 +135,12 @@ public class Controller {
             return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL connection error. Sign-up could not complete."));
         }
         if (resultList.get(0).toString().equals(username)){
-            ReturnBodyController rbc = new ReturnBodyController();
+            ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
             rbc.setMessage("sign-up success");
 //            rbc.put("username", username);
 //            rbc.put("email" , email);
-            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
         return ResponseEntity.ok().body(getErrorResponseAsJSON(resultList.get(0).toString()));
     }
@@ -159,38 +158,49 @@ public class Controller {
             return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
         }
         else{
-            ReturnBodyController rbc = new ReturnBodyController();
+            ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
 //            rbc.put("username",claims.getSubject());
-            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
     }
 
     @RequestMapping(value = "/createquestion", method = RequestMethod.POST, consumes = "application/json")
-    public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, String> payload){
+    public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, Object> payload){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
-        String token = payload.get("token");
-        String title = payload.get("title");
-        String categoryID = payload.get("categoryID");
+        String token = (String) payload.get("token");
+        String question = (String) payload.get("question");
+        String category = (String) payload.get("category");
+        HashMap<String, String> answers = (HashMap<String, String>) payload.get("answers");
 
-        if(token==null || title == null || categoryID == null){
+        if(token==null || question == null || answers == null || category == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
         }
 
         Claims claims = validateToken(token);
-
         if (claims == null){
             return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
         }
+
+        int answersSize = answers.size();
+        if (!(5 >= answersSize && 2 <= answersSize)){
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers must be minimum 2 and maximum 5"));
+        }
+        ResponseBodyController srbc = new ResponseBodyController();
+        String sAnswer = srbc.serializeAnswers(answers);
+        if (sAnswer == null){
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers json error."));
+        }
+
         String userID = claims.get("userID").toString();
         DatabaseConnection conn = new DatabaseConnection();
-        List resultList = conn.createQuestion(userID, title, categoryID);
+        List resultList = conn.createQuestion(userID, question, sAnswer, category);
         if (resultList.get(0).toString().equals("success")){
-            ReturnBodyController rbc = new ReturnBodyController();
+            ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
-            return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
         return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not create question."));
     }
@@ -203,9 +213,9 @@ public class Controller {
         }
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.getQuestions(count, offset);
-        ReturnBodyController rbc = new ReturnBodyController(resultList);
+        ResponseBodyController rbc = new ResponseBodyController(resultList);
         rbc.setStatus(rbc.SUCCESS);
-        return ResponseEntity.ok().body(rbc.getmBodyAsJson());
+        return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
     }
 
 }
