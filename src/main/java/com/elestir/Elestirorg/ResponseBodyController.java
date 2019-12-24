@@ -18,7 +18,6 @@ public class ResponseBodyController {
     }
     public ResponseBodyController(List<HashMap<String,Object>> lBody){
         this.mBody.put("data", lBody);
-        //this.returnBody = lBody;
     }
     public ResponseBodyController(){
 
@@ -40,7 +39,7 @@ public class ResponseBodyController {
         mBody.put("message", message);
     }
 
-    public void put(String key, String value){
+    public void put(String key, Object value){
         mBody.put(key, value);
     }
 
@@ -50,25 +49,27 @@ public class ResponseBodyController {
             return objectMapper.writeValueAsString(mBody);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
-            return "{\"status\" : \"failed\" , \"message\" : \"Json error!\"}";
+            return "{\"status\" : failed , \"message\" : Json error!}";
         }
     }
 
-    public String serializeAnswers(HashMap<String, String> hMap) {
+    public String serializeAnswers(HashMap<String, HashMap> hMap) {
         ObjectMapper objectMapper = new ObjectMapper();
         HashMap<Integer,String> map = new HashMap<>();
         if (!(5 >= hMap.size() && 2 <= hMap.size())){
+            System.out.println("kisa uzun");
             return null;
         }
-        int pointer = 1;
-        for (String value: hMap.values()) {
-            map.put(pointer,value);
-            pointer++;
-        }
+//        int pointer = 1;
+//        for (String value: hMap.values()) {
+//            map.put(pointer,value);
+//            pointer++;
+//        }//rearrange a map
         try {
-            return objectMapper.writeValueAsString(map);
+            return objectMapper.writeValueAsString(hMap);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+            System.out.println("catch");
             return null;
         }
     }

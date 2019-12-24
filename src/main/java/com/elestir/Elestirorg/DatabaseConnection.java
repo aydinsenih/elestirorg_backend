@@ -178,10 +178,10 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
     }
 
-    public List createQuestion(String userID, String question, String answers,String category){
-        //final String CREATE_QUESTION_QUERY = "INSERT INTO questions(userID, title, CategoryID) VALUES (?, ?, ?)";
-        final String CREATE_QUESTION_QUERY =  "INSERT INTO `questions`(`question`, `answers`, `userID`, `CategoryID`)" +
-                " VALUES (?, ?, ?,(SELECT CategoryID from category WHERE category.categoryName = ?))";
+    public List<String> createQuestion(String userID, String question, String category, String a1, String a2, String a3, String a4, String a5){
+        final String CREATE_QUESTION_QUERY =  "INSERT INTO `questions` (`question`, `userID`, `CategoryID`," +
+                " `answer1`, `answer2`, `answer3`, `answer4`, `answer5`) VALUES (?, ?," +
+                " (SELECT CategoryID from category WHERE category.categoryName = ?), ?, ?, ?, ?, ?)";
         PreparedStatement ps;
         int result = -1;
 
@@ -191,9 +191,13 @@ public class DatabaseConnection {
         try {
             ps = conn.prepareStatement(CREATE_QUESTION_QUERY);
             ps.setString(1, question);
-            ps.setString(2, answers);
-            ps.setString(3, userID);
-            ps.setString(4, category);
+            ps.setString(2, userID);
+            ps.setString(3, category);
+            ps.setString(4, a1);
+            ps.setString(5, a2);
+            ps.setString(6, a3);
+            ps.setString(7, a4);
+            ps.setString(8, a5);
             result = ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -234,9 +238,19 @@ public class DatabaseConnection {
             list = new ArrayList();
             while (rs.next()){
                 HashMap hashmap = new HashMap(columns);
+                HashMap answersMap = new HashMap(5);
                 for(int i=1; i<=columns ; ++i){
-                    hashmap.put(md.getColumnName(i), rs.getObject(i));
+                    switch (md.getColumnName(i)){
+                        case "answer1" : answersMap.put("1", rs.getObject(i)); break;
+                        case "answer2" : answersMap.put("2", rs.getObject(i)); break;
+                        case "answer3" : answersMap.put("3", rs.getObject(i)); break;
+                        case "answer4" : answersMap.put("4", rs.getObject(i)); break;
+                        case "answer5" : answersMap.put("5", rs.getObject(i)); break;
+                        default: hashmap.put(md.getColumnName(i), rs.getObject(i)); break;
+                    }
+
                 }
+                hashmap.put("answers", answersMap);
                 list.add(hashmap);
             }
 

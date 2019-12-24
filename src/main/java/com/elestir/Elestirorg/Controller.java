@@ -170,12 +170,33 @@ public class Controller {
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
-        String token = (String) payload.get("token");
-        String question = (String) payload.get("question");
-        String category = (String) payload.get("category");
-        HashMap<String, String> answers = (HashMap<String, String>) payload.get("answers");
 
-        if(token==null || question == null || answers == null || category == null){
+        String token = (payload.get("token") instanceof String) ? payload.get("token").toString() : null;
+        String question = (payload.get("question") instanceof String) ? payload.get("question").toString() : null;
+        String category = (payload.get("category") instanceof String) ? payload.get("category").toString() : null;
+        //HashMap<String, HashMap> answers = (HashMap<String, HashMap>) payload.get("answers");
+        Object oAnswers = payload.get("answers");
+        String answer1 = null;
+        String answer2 = null;
+        String answer3 = null;
+        String answer4 = null;
+        String answer5 = null;
+        if(oAnswers instanceof HashMap){
+            HashMap<?, ?> answers = (HashMap<?, ?>) oAnswers;// TODO:test et
+            System.out.println(answers);
+            answer1 = (String) answers.get("1");
+            answer2 = (String) answers.get("2");
+            answer3 = (String) answers.get("3");
+            answer4 = (String) answers.get("4");
+            answer5 = (String) answers.get("5");
+        }
+        System.out.println(answer1);
+        System.out.println(answer2);
+
+
+
+
+        if(token==null || question == null || answer1 == null || answer2 == null || category == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
         }
 
@@ -184,19 +205,21 @@ public class Controller {
             return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
         }
 
-        int answersSize = answers.size();
-        if (!(5 >= answersSize && 2 <= answersSize)){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers must be minimum 2 and maximum 5"));
-        }
-        ResponseBodyController srbc = new ResponseBodyController();
-        String sAnswer = srbc.serializeAnswers(answers);
-        if (sAnswer == null){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers json error."));
-        }
+//        int answersSize = answers.size();
+//        if (!(5 >= answersSize && 2 <= answersSize)){
+//            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers must be minimum 2 and maximum 5"));
+//        }
+
+//        ResponseBodyController srbc = new ResponseBodyController();
+//        String sAnswer = srbc.serializeAnswers(answers);
+//        System.out.println(sAnswer);////////////////////////
+//        if (sAnswer == null){
+//            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers json error."));
+//        }
 
         String userID = claims.get("userID").toString();
         DatabaseConnection conn = new DatabaseConnection();
-        List resultList = conn.createQuestion(userID, question, sAnswer, category);
+        List<String> resultList = conn.createQuestion(userID, question, category ,answer1 , answer2, answer3, answer4, answer5);
         if (resultList.get(0).toString().equals("success")){
             ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
