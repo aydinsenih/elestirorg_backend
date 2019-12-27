@@ -217,7 +217,7 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
     }
 
-    public List getQuestions(int count, int offset){
+    public List getQuestions(int count, int offset,int userID){
         String GET_QUESTIONS_QUERY = "SELECT * from questions ORDER BY questions.ID DESC LIMIT ?,?";
         PreparedStatement ps;
         ResultSet rs;
@@ -239,6 +239,17 @@ public class DatabaseConnection {
                 HashMap hashmap = new HashMap(columns);
                 HashMap answersMap;
                 ArrayList answersList = new ArrayList(5);
+                if (userID != 0) {
+                    String choice = getChoice(userID, rs.getInt("ID"));
+                    if (choice != null)
+                        hashmap.put("choice", Integer.parseInt(choice));
+                    else{
+                        hashmap.put("choice", null);
+                    }
+                } else{
+                    hashmap.put("choice", null);
+                }
+
                 for(int i=1; i<=columns ; ++i){
                     answersMap = new HashMap();
                     switch (md.getColumnName(i)){
@@ -253,9 +264,6 @@ public class DatabaseConnection {
                             break;
                         default: hashmap.put(md.getColumnName(i), rs.getObject(i)); break;
                     }
-
-                    // [  { value: '' }, { value: '' } ]
-
                 }
                 hashmap.put("answers", answersList);
                 list.add(hashmap);
@@ -277,7 +285,7 @@ public class DatabaseConnection {
         return list;
     }
 
-    public List setChoice(int userID, int questionID, int choice){
+    public List setChoice(int userID, int questionID, int choice){//TODO: eger aynisi yoksa yaz yoksa ustune yaz
         String SET_CHOICE_QUERY = "INSERT INTO `answers`(`userID`, `questionID`, `choice`) VALUES ((SELECT users.ID from users WHERE users.ID = ?)," +
                 "(SELECT questions.ID from questions WHERE questions.ID = ?), ?)";
         PreparedStatement ps;
@@ -308,5 +316,26 @@ public class DatabaseConnection {
             return new ArrayList(Arrays.asList("success","question created."));
         }
         return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
+    }
+
+    public String getChoice(int userID, int questionID){
+        String GET_CHOICE_QUERY = "SELECT choice FROM `answers` WHERE userID = ? AND questionID = ?";
+        PreparedStatement ps;
+        ResultSet rs;
+        try {
+            ps = conn.prepareStatement(GET_CHOICE_QUERY);
+            ps.setInt(1, userID);
+            ps.setInt(2, questionID);
+            rs = ps.executeQuery();
+            //ResultSetMetaData md = rs.getMetaData();
+            if(rs.next())
+                return rs.getString(1);
+            return null;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+
     }
 }

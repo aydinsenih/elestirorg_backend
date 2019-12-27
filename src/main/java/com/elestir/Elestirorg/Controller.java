@@ -224,13 +224,24 @@ public class Controller {
     }
 
     @RequestMapping(value = "/getquestions", method = RequestMethod.GET, produces = "application/json")
-    public ResponseEntity<String> getQuestions(@RequestParam(value = "count",defaultValue = "5") int count,
-                                              @RequestParam(value = "offset",defaultValue = "0") int offset){
+    public ResponseEntity<String> getQuestions(@RequestParam(value = "count", defaultValue = "5") int count,
+                                              @RequestParam(value = "offset", defaultValue = "0") int offset,
+                                               @RequestBody(required = false) HashMap<String,String> payload){
         if(count - offset > 20){
             return ResponseEntity.ok().body(getErrorResponseAsJSON("Can not provide more than 20 questions."));
         }
+        String token;
+        token = payload == null ? token = null : payload.get("token");
+        Claims claims;
+        int userID = 0;
+        if (token != null) {
+            claims = validateToken(token);
+            if (claims != null){
+                userID = Integer.parseInt(claims.get("userID").toString());
+            }
+        }
         DatabaseConnection conn = new DatabaseConnection();
-        List resultList = conn.getQuestions(count, offset);
+        List resultList = conn.getQuestions(count, offset, userID);
         if (resultList != null) {
             ResponseBodyController rbc = new ResponseBodyController(resultList);
             rbc.setStatus(rbc.SUCCESS);
