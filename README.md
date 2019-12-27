@@ -25,10 +25,16 @@ Returns : JSON with "status", "data" and "message"(if error occurred).
 Params : "token", "question" , "category" , "answers".
 
 "answers" must be json format as shown below
- {"1":"some answer", "2":"some other answer"}
+"answers":["c1", "c2", "c3", "c4"]
  "answers" answers must be between 2 and 5 (2 and 5 include).
  
- "category" must be one of the following
+ "category" must be one of the following:
  "Siyaset" , "Eglence" , "General"
 
 Returns : "status" and "message"(if error occurred).
+
+/setchoice method POST
+Params: "token", "questionID", "choice"
+"questionID" must be valid.
+"choice" must be between 1 and 1 (1 and 5 include).
+Returns : JSON with "status", "data" and "message"(if error occurred).

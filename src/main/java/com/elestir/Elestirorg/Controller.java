@@ -138,8 +138,6 @@ public class Controller {
             ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
             rbc.setMessage("sign-up success");
-//            rbc.put("username", username);
-//            rbc.put("email" , email);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
         return ResponseEntity.ok().body(getErrorResponseAsJSON(resultList.get(0).toString()));
@@ -160,7 +158,6 @@ public class Controller {
         else{
             ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
-//            rbc.put("username",claims.getSubject());
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
     }
@@ -174,29 +171,39 @@ public class Controller {
         String token = (payload.get("token") instanceof String) ? payload.get("token").toString() : null;
         String question = (payload.get("question") instanceof String) ? payload.get("question").toString() : null;
         String category = (payload.get("category") instanceof String) ? payload.get("category").toString() : null;
-        //HashMap<String, HashMap> answers = (HashMap<String, HashMap>) payload.get("answers");
         Object oAnswers = payload.get("answers");
+
         String answer1 = null;
         String answer2 = null;
         String answer3 = null;
         String answer4 = null;
         String answer5 = null;
-        if(oAnswers instanceof HashMap){
-            HashMap<?, ?> answers = (HashMap<?, ?>) oAnswers;// TODO:test et
-            System.out.println(answers);
-            answer1 = (String) answers.get("1");
-            answer2 = (String) answers.get("2");
-            answer3 = (String) answers.get("3");
-            answer4 = (String) answers.get("4");
-            answer5 = (String) answers.get("5");
+        if(oAnswers instanceof ArrayList) {
+            ArrayList answers = (ArrayList) oAnswers;
+            int i = 0;
+            for (Object answer : answers) {
+                switch (i) {
+                    case 0:
+                        answer1 = answer.toString().trim();
+                        break;
+                    case 1:
+                        answer2 = answer.toString().trim();
+                        break;
+                    case 2:
+                        answer3 = answer.toString().trim();
+                        break;
+                    case 3:
+                        answer4 = answer.toString().trim();
+                        break;
+                    case 4:
+                        answer5 = answer.toString().trim();
+                        break;
+                }
+                i++;
+            }
         }
-        System.out.println(answer1);
-        System.out.println(answer2);
 
-
-
-
-        if(token==null || question == null || answer1 == null || answer2 == null || category == null){
+        if(token == null || question == null || answer1 == null || answer2 == null || category == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
         }
 
@@ -205,22 +212,10 @@ public class Controller {
             return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
         }
 
-//        int answersSize = answers.size();
-//        if (!(5 >= answersSize && 2 <= answersSize)){
-//            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers must be minimum 2 and maximum 5"));
-//        }
-
-//        ResponseBodyController srbc = new ResponseBodyController();
-//        String sAnswer = srbc.serializeAnswers(answers);
-//        System.out.println(sAnswer);////////////////////////
-//        if (sAnswer == null){
-//            return ResponseEntity.ok().body(getErrorResponseAsJSON("Answers json error."));
-//        }
-
-        String userID = claims.get("userID").toString();
+        int userID = Integer.parseInt(claims.get("userID").toString());
         DatabaseConnection conn = new DatabaseConnection();
         List<String> resultList = conn.createQuestion(userID, question, category ,answer1 , answer2, answer3, answer4, answer5);
-        if (resultList.get(0).toString().equals("success")){
+        if (resultList.get(0).equals("success")){
             ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
@@ -236,9 +231,60 @@ public class Controller {
         }
         DatabaseConnection conn = new DatabaseConnection();
         List resultList = conn.getQuestions(count, offset);
-        ResponseBodyController rbc = new ResponseBodyController(resultList);
-        rbc.setStatus(rbc.SUCCESS);
-        return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        if (resultList != null) {
+            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not get questions."));
+    }
+
+    @RequestMapping(value = "/setchoice", method = RequestMethod.POST, consumes = "application/json")
+    public ResponseEntity<String> setChoice(@RequestBody(required = false) HashMap<String, String> payload){
+
+        if (payload == null){
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
+        }
+
+        String token = payload.get("token");
+        String sQuestionID = payload.get("questionID");
+        String sChoice = payload.get("choice");
+
+        if (token == null || sQuestionID == null || sChoice == null){
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
+        }
+
+        Claims claims = validateToken(token);
+        if(claims == null){
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Token not valid."));
+        }
+
+        int userID;
+        int questionID;
+        int choice;
+        try {
+            userID = Integer.parseInt(claims.get("userID").toString());
+            questionID = Integer.parseInt(payload.get("questionID"));
+            choice = Integer.parseInt(payload.get("choice"));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Invalid data."));
+        }
+        System.out.println(choice);
+        if (choice > 5 || choice < 1){
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid integer data."));
+        }
+
+        DatabaseConnection conn = new DatabaseConnection();
+        List result = conn.setChoice(userID, questionID, choice);
+
+        if (result.get(0).equals("success")){
+            ResponseBodyController rbc = new ResponseBodyController();
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not set choice."));
+
     }
 
 }

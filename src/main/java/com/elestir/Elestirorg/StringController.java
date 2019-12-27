@@ -21,4 +21,5 @@ public class StringController {
         Matcher m = pattern.matcher(strEmail);
         return m.matches();
     }
+    //TODO: username check password check
 }

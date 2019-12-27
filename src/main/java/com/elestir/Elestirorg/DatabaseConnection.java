@@ -178,7 +178,7 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
     }
 
-    public List<String> createQuestion(String userID, String question, String category, String a1, String a2, String a3, String a4, String a5){
+    public List<String> createQuestion(int userID, String question, String category, String a1, String a2, String a3, String a4, String a5){
         final String CREATE_QUESTION_QUERY =  "INSERT INTO `questions` (`question`, `userID`, `CategoryID`," +
                 " `answer1`, `answer2`, `answer3`, `answer4`, `answer5`) VALUES (?, ?," +
                 " (SELECT CategoryID from category WHERE category.categoryName = ?), ?, ?, ?, ?, ?)";
@@ -191,7 +191,7 @@ public class DatabaseConnection {
         try {
             ps = conn.prepareStatement(CREATE_QUESTION_QUERY);
             ps.setString(1, question);
-            ps.setString(2, userID);
+            ps.setInt(2, userID);
             ps.setString(3, category);
             ps.setString(4, a1);
             ps.setString(5, a2);
@@ -207,7 +207,6 @@ public class DatabaseConnection {
                     conn.close();
                 } catch (SQLException e) {
                     e.printStackTrace();
-                    //return new ArrayList(Arrays.asList("sql connection error."));
                 }
             }
         }
@@ -238,22 +237,61 @@ public class DatabaseConnection {
             list = new ArrayList();
             while (rs.next()){
                 HashMap hashmap = new HashMap(columns);
-                HashMap answersMap = new HashMap(5);
+                HashMap answersMap;
+                ArrayList answersList = new ArrayList(5);
                 for(int i=1; i<=columns ; ++i){
+                    answersMap = new HashMap();
                     switch (md.getColumnName(i)){
-                        case "answer1" : answersMap.put("1", rs.getObject(i)); break;
-                        case "answer2" : answersMap.put("2", rs.getObject(i)); break;
-                        case "answer3" : answersMap.put("3", rs.getObject(i)); break;
-                        case "answer4" : answersMap.put("4", rs.getObject(i)); break;
-                        case "answer5" : answersMap.put("5", rs.getObject(i)); break;
+                        case "answer1" :
+                        case "answer2" :
+                        case "answer3" :
+                        case "answer4" :
+                        case "answer5" :
+                            answersMap.put("name", md.getColumnName(i));
+                            answersMap.put("value", rs.getObject(i));
+                            answersList.add(answersMap);
+                            break;
                         default: hashmap.put(md.getColumnName(i), rs.getObject(i)); break;
                     }
 
+                    // [  { value: '' }, { value: '' } ]
+
                 }
-                hashmap.put("answers", answersMap);
+                hashmap.put("answers", answersList);
                 list.add(hashmap);
             }
 
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        } finally { //connection close
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    //return null;//if connection error occur.
+                }
+            }
+        }
+        return list;
+    }
+
+    public List setChoice(int userID, int questionID, int choice){
+        String SET_CHOICE_QUERY = "INSERT INTO `answers`(`userID`, `questionID`, `choice`) VALUES ((SELECT users.ID from users WHERE users.ID = ?)," +
+                "(SELECT questions.ID from questions WHERE questions.ID = ?), ?)";
+        PreparedStatement ps;
+        if (!dbConnection()){
+            return new ArrayList(Arrays.asList("SQL connection error."));
+        }
+
+        int result = 0;
+        try {
+            ps = conn.prepareStatement(SET_CHOICE_QUERY);
+            ps.setInt(1, userID);
+            ps.setInt(2, questionID);
+            ps.setInt(3, choice);
+            result = ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         } finally { //connection close
@@ -266,6 +304,9 @@ public class DatabaseConnection {
                 }
             }
         }
-        return list;
+        if (result == 1){
+            return new ArrayList(Arrays.asList("success","question created."));
+        }
+        return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
     }
 }
