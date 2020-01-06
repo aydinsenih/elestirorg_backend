@@ -18,16 +18,14 @@ Returns : JSON with "status" and "message"(if error occurred).
 
 /getquestions method GET
 Params : "count"(not required), "offset"(not required), "token"
-"token" must be in request\`s body
-with "token" return contains user\`s previous answers for each question("choice" in "data").
+With "token" return contains user\`s previous answers for each question("choice" in "data").
 
 Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /createquestion method POST
 Params : "token", "question" , "category" , "answers".
 
-"answers" must be json format as shown below
-"answers":["c1", "c2", "c3", "c4"]
+"answers" must be an array
  "answers" answers count must be between 2 and 5 (2 and 5 include).
  
  "category" must be one of the following:
@@ -41,3 +39,14 @@ Params: "token", "questionID", "choice"
 "choice"(integer) must be between 1 and 5 (1 and 5 include).
 
 Returns : JSON with "status", "data" and "message"(if error occurred).
+
+/createcomment method POST
+Params: "token", "questionID", "comment", "emoji".
+"questionID" must be valid.
+
+Returns : JSON with "status", "message"(if error occurred).
+
+/getcomments method POST
+Params: "questionID", "count"(not required), "offset"(not required).
+
+Returns:  JSON with "status", "data" and "message"(if error occurred).
