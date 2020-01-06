@@ -45,7 +45,7 @@ public class DatabaseConnection {
 
             ResultSetMetaData md = resultSet.getMetaData();
             int columns = md.getColumnCount();
-            ArrayList list = new ArrayList();
+            ArrayList list = null;
             while (resultSet.next()){
                 HashMap hashmap = new HashMap(columns);
                 for(int i=1; i<=columns ; ++i){
@@ -217,7 +217,7 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
     }
 
-    public List getQuestions(int count, int offset,int userID){
+    public List getQuestions(int offset, int count,int userID){
         String GET_QUESTIONS_QUERY = "SELECT * from questions ORDER BY questions.ID DESC LIMIT ?,?";
         PreparedStatement ps;
         ResultSet rs;
@@ -285,12 +285,12 @@ public class DatabaseConnection {
         return list;
     }
 
-    public List setChoice(int userID, int questionID, int choice){//TODO: eger aynisi yoksa yaz yoksa ustune yaz
+    public boolean setChoice(int userID, int questionID, int choice){//TODO: eger aynisi yoksa yaz yoksa ustune yaz//TODO:liste cevir error mesajlarini belirlemek icin
         String SET_CHOICE_QUERY = "INSERT INTO `answers`(`userID`, `questionID`, `choice`) VALUES ((SELECT users.ID from users WHERE users.ID = ?)," +
                 "(SELECT questions.ID from questions WHERE questions.ID = ?), ?)";
         PreparedStatement ps;
         if (!dbConnection()){
-            return new ArrayList(Arrays.asList("SQL connection error."));
+            return false;
         }
 
         int result = 0;
@@ -313,9 +313,9 @@ public class DatabaseConnection {
             }
         }
         if (result == 1){
-            return new ArrayList(Arrays.asList("success","question created."));
+            return true;
         }
-        return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
+        return false;
     }
 
     public String getChoice(int userID, int questionID){
@@ -335,6 +335,86 @@ public class DatabaseConnection {
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
+        }
+
+    }
+
+    public boolean createComment(int userID, int questionID, String emoji, String comment){//TODO:liste cevir
+        String CREATE_COMMENT_QUERY = "INSERT INTO `comments`(`userID`, `questionID`, `commentEmoji`, `commentText`)" +
+                " VALUES ((SELECT users.ID FROM users WHERE users.ID = ?)," +
+                "?, ?, ?)";
+        String QUESTION_ID_CHECK_QUERY = "SELECT `questions`.`ID` FROM `questions` WHERE `questions`.`ID` = ?";
+        if (!dbConnection()){
+            return false;
+        }
+        PreparedStatement ps;
+        PreparedStatement ps2;
+        ResultSet rs;
+        try {
+            ps = conn.prepareStatement(QUESTION_ID_CHECK_QUERY);
+            ps.setInt(1, questionID);
+            rs = ps.executeQuery();
+            if (!rs.next())
+                return false;
+
+            ps2 = conn.prepareStatement(CREATE_COMMENT_QUERY);
+            ps2.setInt(1, userID);
+            ps2.setInt(2, questionID);
+            ps2.setString(3, emoji);
+            ps2.setString(4, comment);
+            return ps2.executeUpdate() != 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally { //connection close
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public List getCommentsForQuestion(int questionID, int offset, int count){
+        String COMMENTS_FOR_QUESTION = "SELECT `ID`, `userID`, `questionID`, `commentEmoji`, `commentText`," +
+                " `creationTime`, `likeCount`, `dislikeCount` FROM `comments` WHERE `questionID` = ? LIMIT ?, ?";
+        if (!dbConnection())
+            return null;
+
+        PreparedStatement ps;
+        ResultSet rs;
+
+        try {
+            ps = conn.prepareStatement(COMMENTS_FOR_QUESTION);
+            ps.setInt(1, questionID);
+            ps.setInt(2, offset);
+            ps.setInt(3, count);
+            rs = ps.executeQuery();
+
+            ArrayList list = null;
+            ResultSetMetaData md = rs.getMetaData();
+            int columns = md.getColumnCount();
+            while(rs.next()){
+                HashMap hashmap = new HashMap(columns);
+                for(int i=1; i<=columns ; ++i){
+                    hashmap.put(md.getColumnName(i), rs.getObject(i));
+                }
+                list.add(hashmap);
+            }
+            return list;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        } finally { //connection close
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
     }

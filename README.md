@@ -38,5 +38,6 @@ Returns : "status" and "message"(if error occurred).
 /setchoice method POST
 Params: "token", "questionID", "choice"
 "questionID" must be valid.
-"choice"(integer) must be between 1 and 1 (1 and 5 include).
+"choice"(integer) must be between 1 and 5 (1 and 5 include).
+
 Returns : JSON with "status", "data" and "message"(if error occurred).
