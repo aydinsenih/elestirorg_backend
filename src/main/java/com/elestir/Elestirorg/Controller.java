@@ -102,7 +102,7 @@ public class Controller {
             }
             resultMap.put("token", newToken);
         }
-        resultMap.remove("ID");
+        //resultMap.remove("ID");
         ResponseBodyController rbc = new ResponseBodyController(resultMap);
         rbc.setStatus(rbc.SUCCESS);
         rbc.setMessage("login success");

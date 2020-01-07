@@ -45,7 +45,7 @@ public class DatabaseConnection {
 
             ResultSetMetaData md = resultSet.getMetaData();
             int columns = md.getColumnCount();
-            ArrayList list = null;
+            ArrayList list = new ArrayList();
             while (resultSet.next()){
                 HashMap hashmap = new HashMap(columns);
                 for(int i=1; i<=columns ; ++i){
@@ -217,7 +217,7 @@ public class DatabaseConnection {
         return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
     }
 
-    public List getQuestions(int offset, int count,int userID){
+    public List getQuestions(int offset, int count,int userID){//TODO: soruyu yazanin nick ve avatari donecek
         String GET_QUESTIONS_QUERY = "SELECT * from questions ORDER BY questions.ID DESC LIMIT ?,?";
         PreparedStatement ps;
         ResultSet rs;
