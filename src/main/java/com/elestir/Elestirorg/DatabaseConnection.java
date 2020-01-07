@@ -393,7 +393,7 @@ public class DatabaseConnection {
             ps.setInt(3, count);
             rs = ps.executeQuery();
 
-            ArrayList list = null;
+            ArrayList list = new ArrayList();
             ResultSetMetaData md = rs.getMetaData();
             int columns = md.getColumnCount();
             while(rs.next()){
