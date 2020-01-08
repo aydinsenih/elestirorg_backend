@@ -242,7 +242,7 @@ public class DatabaseConnection {
                 HashMap userMap = new HashMap();
                 ArrayList answersList = new ArrayList(5);
                 if (userID != 0) {
-                    int choice = getChoice(userID, rs.getInt("ID"));//TODO:tek ifle yap
+                    int choice = getChoice(userID, rs.getInt("ID"));
                     if (choice != -1)
                         hashmap.put("choice", choice);
                     else{
@@ -272,6 +272,7 @@ public class DatabaseConnection {
                 hashmap.put("usersInfo", userMap);
                 list.add(hashmap);
             }
+            return list;
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -286,7 +287,65 @@ public class DatabaseConnection {
                 }
             }
         }
-        return list;
+    }
+
+    public HashMap getQuestionByQuestionID(int questionID, int userID){
+        String GET_QUESTION_BY_QUESTION_ID_QUERY = "SELECT questions.*, users.username, users.avatar FROM questions " +
+                "RIGHT JOIN users ON questions.userID = users.ID WHERE questions.ID = ?";
+        if (dbConnection()){
+            return null;
+        }
+        PreparedStatement ps;
+        ResultSet rs;
+        try {
+            ps = conn.prepareStatement(GET_QUESTION_BY_QUESTION_ID_QUERY);
+            ps.setInt(1, questionID);
+            rs = ps.executeQuery();
+
+            ResultSetMetaData md = rs.getMetaData();
+            int columns = md.getColumnCount();
+            HashMap hashmap = new HashMap(columns);
+            if(rs.next()){
+                HashMap answersMap;
+                HashMap countsMap = new HashMap();
+                HashMap userMap = new HashMap();
+                ArrayList answersList = new ArrayList(5);
+                if (userID != 0) {
+                    int choice = getChoice(userID, rs.getInt("ID"));
+                    if (choice != -1)
+                        hashmap.put("choice", choice);
+                    else{
+                        hashmap.put("choice", null);
+                    }
+                } else{
+                    hashmap.put("choice", null);
+                }
+
+                for(int i=1; i<=columns ; ++i){
+                    String columnName = md.getColumnName(i);
+                    answersMap = new HashMap();
+                    if (columnName.startsWith("answer")){
+                        answersMap.put("name", md.getColumnName(i));
+                        answersMap.put("value", rs.getString(i));
+                        answersList.add(answersMap);
+                    } else if (columnName.contains("Count") || columnName.contains("Time")){
+                        countsMap.put(md.getColumnName(i), rs.getObject(i));
+                    } else if (columnName.equals("username") || columnName.equals("avatar") || columnName.equals("userID")){
+                        userMap.put(md.getColumnName(i), rs.getObject(i));
+                    } else {
+                        hashmap.put(md.getColumnName(i), rs.getObject(i));
+                    }
+                }
+                hashmap.put("answers", answersList);
+                hashmap.put("metaData", countsMap);
+                hashmap.put("usersInfo", userMap);
+            }
+            return hashmap;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public List getQuestionsByUserID(int userID, int offset, int count){

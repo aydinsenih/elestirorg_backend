@@ -422,4 +422,27 @@ public class Controller {
         return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
     }
 
+    @RequestMapping(value = "/question/{id}", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<String> getQuestionByQuestionID (@PathVariable("id")int questionID,
+                                                           @RequestBody(required = false)HashMap<String, String> payload){
+        HashMap hashMap;
+        if (payload != null && payload.get("token") != null){
+            Claims claims = validateToken(payload.get("token"));
+            if (claims != null){
+                DatabaseConnection conn = new DatabaseConnection();
+                hashMap = conn.getQuestionByQuestionID(questionID, Integer.parseInt(claims.get("userID").toString()));
+            }
+            else return ResponseEntity.ok().body(getErrorResponseAsJSON("Invalid token."));
+        } else {
+            DatabaseConnection conn = new DatabaseConnection();
+            hashMap = conn.getQuestionByQuestionID(questionID, 0);
+        }
+        if (hashMap != null){
+            ResponseBodyController rbc = new ResponseBodyController(hashMap);
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+    }
+
 }

@@ -65,3 +65,8 @@ Returns: Json with "status", "data" and "message"(if error occurred).
 Params: "offset"(not required) and "count"(not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).
+
+/question/{questionid} method POST or GET
+Params: "token" (with "token" method must be POST. not required).
+
+Returns: Json with "status", "data" and "message"(if error occurred).
