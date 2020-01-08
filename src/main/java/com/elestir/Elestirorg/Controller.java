@@ -145,7 +145,7 @@ public class Controller {
         return ResponseEntity.ok().body(getErrorResponseAsJSON(resultList.get(0).toString()));
     }
 
-    @RequestMapping(value = "/isloggedin", method = RequestMethod.POST, consumes = "application/json")
+    @RequestMapping(value = "/isloggedin", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
     public ResponseEntity<String> isLoggedin(@RequestBody(required = false) HashMap<String, String> payload){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
@@ -164,7 +164,7 @@ public class Controller {
         }
     }
 
-    @RequestMapping(value = "/createquestion", method = RequestMethod.POST, consumes = "application/json")
+    @RequestMapping(value = "/createquestion", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
     public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, Object> payload){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
@@ -255,18 +255,17 @@ public class Controller {
         }
 
         DatabaseConnection conn = new DatabaseConnection();
-        List resultList;
-        resultList = conn.getQuestions(offset, count, userID);
+        List resultList = conn.getQuestions(offset, count, userID);
 
         if (resultList != null) {
             ResponseBodyController rbc = new ResponseBodyController(resultList);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL connection error!"));
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
     }
 
-    @RequestMapping(value = "/setchoice", method = RequestMethod.POST, consumes = "application/json")
+    @RequestMapping(value = "/setchoice", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
     public ResponseEntity<String> setChoice(@RequestBody(required = false) HashMap<String, String> payload){
 
         if (payload == null){
@@ -313,7 +312,7 @@ public class Controller {
 
     }
 
-    @RequestMapping(value = "/createcomment", method = RequestMethod.POST, consumes = "application/json")
+    @RequestMapping(value = "/createcomment", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
     public ResponseEntity<String> createComment(@RequestBody(required = false) HashMap<String,String> payload){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
@@ -344,7 +343,6 @@ public class Controller {
 
 
         DatabaseConnection conn = new DatabaseConnection();
-
         if (conn.createComment(userID, questionID, cEmoji, cText)){
             ResponseBodyController rbc = new ResponseBodyController();
             rbc.setStatus(rbc.SUCCESS);
@@ -354,22 +352,70 @@ public class Controller {
 
     }
 
-    @RequestMapping(value = "/getcomments", method = RequestMethod.POST, consumes = "application/json")
-    public ResponseEntity<String> getComments(@RequestBody(required = false)HashMap<String,Integer> payload){
-        if (payload == null){
-            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
-        }
-        if (payload.get("questionID") == null){
-            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid data."));
-        }
-        int questionID = payload.get("questionID");
-        int offset = (payload.get("offset") != null) ? payload.get("offset") : 0;
-        int count = (payload.get("count") != null) ? payload.get("count") : 5;
+    @RequestMapping(value = "/getcomments/{id}", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
+    public ResponseEntity<String> getComments(@PathVariable(value = "id")int questionID,
+                                              @RequestParam(value = "offset")int offset,
+                                              @RequestParam(value = "count")int count){
+//        if (payload == null){
+//            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
+//        }
+//        if (payload.get("questionID") == null){
+//            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid data."));
+//        }
+//        int questionID = payload.get("questionID");
+//        int offset = (payload.get("offset") != null) ? payload.get("offset") : 0;
+//        int count = (payload.get("count") != null) ? payload.get("count") : 5;
 
         DatabaseConnection conn = new DatabaseConnection();
         List result = conn.getCommentsForQuestion(questionID, offset, count);
         if (result != null){
             ResponseBodyController rbc = new ResponseBodyController(result);
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+    }
+
+    @RequestMapping(value = "/user/{id}", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<String> getUserByID(@PathVariable(value = "id")int userID){
+
+        DatabaseConnection conn = new DatabaseConnection();
+        HashMap<String, String> resultList = conn.getUserByID(userID);
+        if (resultList != null){
+            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+    }
+
+    @RequestMapping(value = "/getquestionsbyuserid/{id}", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<String> getQuestionsByUserID(@PathVariable("id")int userID,
+                                                       @RequestParam(value = "offset", defaultValue = "0")int offset,
+                                                       @RequestParam(value = "count", defaultValue = "5")int count){
+        if (count > 20)
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Cannot return more than 20 questions."));
+        DatabaseConnection conn = new DatabaseConnection();
+        List resultList = conn.getQuestionsByUserID(userID, offset, count);
+        if (resultList != null){
+            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            rbc.setStatus(rbc.SUCCESS);
+            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
+        }
+        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+    }
+
+    @RequestMapping(value = "/getcommentsbyuserid/{id}", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<String> getCommentsByUserID(@PathVariable("id")int userID,
+                                                      @RequestParam(value = "offset", defaultValue = "0")int offset,
+                                                      @RequestParam(value = "count", defaultValue = "5")int count){
+        if (count > 20)
+            return ResponseEntity.ok().body(getErrorResponseAsJSON("Cannot return more than 20 comments."));
+        DatabaseConnection conn = new DatabaseConnection();
+        List resultList = conn.getCommentsByUserID(userID, offset, count);
+        if (resultList != null){
+            ResponseBodyController rbc = new ResponseBodyController(resultList);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }

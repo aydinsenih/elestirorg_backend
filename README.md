@@ -46,7 +46,22 @@ Params: "token", "questionID", "comment", "emoji".
 
 Returns : JSON with "status", "message"(if error occurred).
 
-/getcomments method POST
-Params: "questionID", "count"(not required), "offset"(not required).
+/getcomments/{questionid} method GET
+Params: "count"(not required), "offset"(not required).
 
 Returns:  JSON with "status", "data" and "message"(if error occurred).
+
+/user/{userid} method GET
+Params: none
+
+Returns: Json with "status", "data" and "message"(if error occurred).
+
+/getquestionsbyuserid/{userid} method GET
+Params: "offset"(not required) and "count"(not required).
+
+Returns: Json with "status", "data" and "message"(if error occurred).
+
+/getcommentsbyuserid/{userid} method GET
+Params: "offset"(not required) and "count"(not required).
+
+Returns: Json with "status", "data" and "message"(if error occurred).
