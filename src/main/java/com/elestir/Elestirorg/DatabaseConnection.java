@@ -10,6 +10,7 @@ public class DatabaseConnection {
     private final String dbLocalURL = System.getenv("localsql");
     private final String dbCloudURL = System.getenv("cloudsql");
     private Connection conn = null;
+    protected final String SUCCESS = "success";
 
     private boolean dbConnection(){
         try {
@@ -27,31 +28,28 @@ public class DatabaseConnection {
         return false;
     }
 
-    protected List<Object> login(String username, String password){
-        final String LOGIN_QUERY = "SELECT ID, username, email, phoneNumber, avatar, creationTime, token FROM users WHERE username= ? AND password= ?";
+    protected HashMap<String,Object> login(String username, String password){
+        final String LOGIN_QUERY = "SELECT ID, username, email, phoneNumber, avatar, creationTime, token FROM users WHERE username= ? AND password= ?";//TODO:gereksizleri sil sorgudan
         if(dbConnection()){
             return null;//if connection error occur.
             }
-        PreparedStatement preparedStatement;
-        ResultSet resultSet;
+        PreparedStatement ps;
+        ResultSet rs;
         try {
-            preparedStatement = conn.prepareStatement(LOGIN_QUERY);
-            preparedStatement.setString(1, username);
-            preparedStatement.setString(2, password);
-            resultSet = preparedStatement.executeQuery();
+            ps = conn.prepareStatement(LOGIN_QUERY);
+            ps.setString(1, username);
+            ps.setString(2, password);
+            rs = ps.executeQuery();
 
-            ResultSetMetaData md = resultSet.getMetaData();
+            ResultSetMetaData md = rs.getMetaData();
             int columns = md.getColumnCount();
-            ArrayList<Object> list = new ArrayList<>();
-
-            while (resultSet.next()){
-                HashMap<String,Object> hashMap = new HashMap<>(columns);
+            HashMap<String,Object> hashMap = new HashMap<>(columns);
+            if (rs.next()){
                 for(int i=1; i<=columns ; ++i){
-                    hashMap.put(md.getColumnName(i), resultSet.getObject(i));
+                    hashMap.put(md.getColumnName(i), rs.getObject(i));
                 }
-                list.add(hashMap);
             }
-            return list;
+            return hashMap;
         } catch (SQLException e) {
             e.printStackTrace();
             return null;//if connection error occur.
@@ -67,16 +65,16 @@ public class DatabaseConnection {
         }
     }
 
-    protected List<Object> signup(String username, String email, String password, String phonenumber){
+    protected String sign_up(String username, String email, String password, String phonenumber){
         final String USERNAME_EMAIL_CHECK_QUERY = "SELECT * FROM users WHERE email= ? OR username= ?";
-        final String SIGNUP_QUERY = "INSERT INTO users(username, email, password, phoneNumber, hasPermission) VALUES ( ?, ?, ?, ?, 1)";
+        final String SIGN_UP_QUERY = "INSERT INTO users(username, email, password, phoneNumber, hasPermission) VALUES ( ?, ?, ?, ?, 1)";
         PreparedStatement ps;
         PreparedStatement ps2;
         ResultSet rs;
         int updateResult = -1;
 
         if(dbConnection()){
-            return null;//if connection error occur. //new ArrayList(Arrays.asList("sql connection error."));
+            return "SQL connection error.";
         }
 
         try {
@@ -85,9 +83,9 @@ public class DatabaseConnection {
             ps.setString(2,username);
             rs = ps.executeQuery();
             if(rs.next()){
-                return new ArrayList(Collections.singletonList("Username or Email in use."));
+                return "Username or Email in use.";
             }
-            ps2 = conn.prepareStatement(SIGNUP_QUERY);
+            ps2 = conn.prepareStatement(SIGN_UP_QUERY);
             ps2.setString(1, username);
             ps2.setString(2, email);
             ps2.setString(3, password);
@@ -106,17 +104,17 @@ public class DatabaseConnection {
             }
         }
         if(updateResult == 1)
-            return new ArrayList(Arrays.asList(username,"Sign-up successful"));
-        return new ArrayList(Arrays.asList("Sign-up error"));
+            return SUCCESS;
+        return "Sign-up error";
 
     }
 
-    public List logout(String token, String username){
+    public String logout(String token, String username){
         final String DELETE_TOKEN_QUERY = "UPDATE users SET users.token = null WHERE users.username = ?";
         PreparedStatement ps;
         int deleteResult = -1;
         if(dbConnection()){
-            return new ArrayList(Arrays.asList("SQL connection error."));
+            return "SQL connection error.";
         }
 
         try {
@@ -137,19 +135,19 @@ public class DatabaseConnection {
         }
 
         if (deleteResult == 1){
-            return new ArrayList(Arrays.asList(username,"Logged-out."));
+            return username;
         }
-        return new ArrayList(Arrays.asList("SQL connection error. Could not logged-out."));
+        return "SQL connection error. Could not logged-out.";
     }
 
 
-    public List updateTokenForUser(String username, String token) {
+    public String updateTokenForUser(String username, String token) {
         final String UPDATE_TOKEN_QUERY = "UPDATE users SET users.token = ? WHERE users.username = ?";
         PreparedStatement ps;
         int updateResult = -1;
 
         if(dbConnection()){
-            return new ArrayList(Arrays.asList("SQL connection error."));
+            return "SQL connection error.";
         }
 
         try {
@@ -171,12 +169,12 @@ public class DatabaseConnection {
             }
         }
         if (updateResult == 1){
-            return new ArrayList(Arrays.asList(username,"token updated."));
+            return SUCCESS;
         }
-        return new ArrayList(Arrays.asList("SQL connection error. Could not update or create token."));
+        return "SQL connection error. Could not update or create token.";
     }
 
-    public List<String> createQuestion(int userID, String question, String category, String a1, String a2, String a3, String a4, String a5){
+    public String createQuestion(int userID, String question, String category, String a1, String a2, String a3, String a4, String a5){
         final String CREATE_QUESTION_QUERY =  "INSERT INTO `questions` (`question`, `userID`, `CategoryID`," +
                 " `answer1`, `answer2`, `answer3`, `answer4`, `answer5`) VALUES (?, ?," +
                 " (SELECT CategoryID from category WHERE category.categoryName = ?), ?, ?, ?, ?, ?)";
@@ -184,7 +182,7 @@ public class DatabaseConnection {
         int result = -1;
 
         if(dbConnection()){
-            return new ArrayList(Arrays.asList("SQL connection error."));
+            return "SQL connection error.";
         }
         try {
             ps = conn.prepareStatement(CREATE_QUESTION_QUERY);
@@ -210,21 +208,21 @@ public class DatabaseConnection {
         }
 
         if (result == 1){
-            return new ArrayList(Arrays.asList("success","question created."));
+            return SUCCESS;
         }
-        return new ArrayList(Arrays.asList("SQL connection error. Could not create question."));
+        return "SQL connection error. Could not create question.";
     }
 
-    public List getQuestions(int offset, int count,int userID){
+    public List<Object> getQuestions(int offset, int count,int userID){
         //String GET_QUESTIONS_QUERY = "SELECT * from questions ORDER BY questions.ID DESC LIMIT ?,?";
         String GET_QUESTIONS_QUERY = "SELECT questions.*, users.username, users.avatar FROM questions " +
                 "RIGHT JOIN users ON questions.userID = users.ID ORDER BY questions.ID DESC LIMIT ?, ?";
         PreparedStatement ps;
         ResultSet rs;
         if (dbConnection()){
-            return new ArrayList(Arrays.asList("SQL connection error."));
+            return new ArrayList<>(Collections.singletonList("SQL connection error."));
         }
-        ArrayList list = null;
+        ArrayList<Object> list;
 
         try {
             ps =conn.prepareStatement(GET_QUESTIONS_QUERY);
@@ -234,13 +232,13 @@ public class DatabaseConnection {
 
             ResultSetMetaData md = rs.getMetaData();
             int columns = md.getColumnCount();
-            list = new ArrayList();
+            list = new ArrayList<>();
             while (rs.next()){
-                HashMap hashmap = new HashMap(columns);
-                HashMap answersMap;
-                HashMap countsMap = new HashMap();
-                HashMap userMap = new HashMap();
-                ArrayList answersList = new ArrayList(5);
+                HashMap<String, Object> hashmap = new HashMap<>(columns);
+                HashMap<String, Object> answersMap;
+                HashMap<String, Object> countsMap = new HashMap<>();
+                HashMap<String, Object> userMap = new HashMap<>();
+                ArrayList<Object> answersList = new ArrayList<>(5);
                 if (userID != 0) {
                     int choice = getChoice(userID, rs.getInt("ID"));
                     if (choice != -1)
@@ -254,7 +252,7 @@ public class DatabaseConnection {
 
                 for(int i=1; i<=columns ; ++i){
                     String columnName = md.getColumnName(i);
-                    answersMap = new HashMap();
+                    answersMap = new HashMap<>();
                     if (columnName.startsWith("answer")){
                         answersMap.put("name", md.getColumnName(i));
                         answersMap.put("value", rs.getString(i));
@@ -289,7 +287,7 @@ public class DatabaseConnection {
         }
     }
 
-    public HashMap getQuestionByQuestionID(int questionID, int userID){
+    public HashMap<String, Object> getQuestionByQuestionID(int questionID, int userID){
         String GET_QUESTION_BY_QUESTION_ID_QUERY = "SELECT questions.*, users.username, users.avatar FROM questions " +
                 "RIGHT JOIN users ON questions.userID = users.ID WHERE questions.ID = ?";
         if (dbConnection()){
@@ -304,12 +302,12 @@ public class DatabaseConnection {
 
             ResultSetMetaData md = rs.getMetaData();
             int columns = md.getColumnCount();
-            HashMap hashmap = new HashMap(columns);
+            HashMap<String, Object> hashmap = new HashMap<>(columns);
             if(rs.next()){
-                HashMap answersMap;
-                HashMap countsMap = new HashMap();
-                HashMap userMap = new HashMap();
-                ArrayList answersList = new ArrayList(5);
+                HashMap<String, Object> answersMap;
+                HashMap<String, Object> countsMap = new HashMap<>();
+                HashMap<String, Object> userMap = new HashMap<>();
+                ArrayList<Object> answersList = new ArrayList<>(5);
                 if (userID != 0) {
                     int choice = getChoice(userID, rs.getInt("ID"));
                     if (choice != -1)
@@ -323,7 +321,7 @@ public class DatabaseConnection {
 
                 for(int i=1; i<=columns ; ++i){
                     String columnName = md.getColumnName(i);
-                    answersMap = new HashMap();
+                    answersMap = new HashMap<>();
                     if (columnName.startsWith("answer")){
                         answersMap.put("name", md.getColumnName(i));
                         answersMap.put("value", rs.getString(i));
@@ -348,7 +346,7 @@ public class DatabaseConnection {
         }
     }
 
-    public List getQuestionsByUserID(int userID, int offset, int count){
+    public List<Object> getQuestionsByUserID(int userID, int offset, int count){
         String GET_QUESTIONS_BY_USER_ID_QUERY = "SELECT `ID`, `question`, `creationTime` FROM `questions` WHERE `userID`= ? ORDER BY ID DESC LIMIT ?, ?";
         if (dbConnection()){
             return null;
@@ -362,11 +360,11 @@ public class DatabaseConnection {
             ps.setInt(2, offset);
             ps.setInt(3, count);
             rs = ps.executeQuery();
-            List list = new ArrayList();
+            List<Object> list = new ArrayList<>();
             ResultSetMetaData md = rs.getMetaData();
             int column = md.getColumnCount();
             while (rs.next()){
-                HashMap hashMap = new HashMap();
+                HashMap<String, Object> hashMap = new HashMap<>();
                 for (int i=1; i<=column;++i){
                     hashMap.put(md.getColumnName(i), rs.getObject(i));
                 }
@@ -388,7 +386,7 @@ public class DatabaseConnection {
         }
     }
 
-    public List getCommentsByUserID(int userID, int offset, int count){
+    public List<Object> getCommentsByUserID(int userID, int offset, int count){
         String GET_COMMENTS_BY_USER_ID_QUERY = "SELECT `ID`, `userID`, `questionID`, `commentEmoji`, `commentText`, " +
                 "`creationTime`, `likeCount`, `dislikeCount` FROM `comments` WHERE userID = ? ORDER BY ID LIMIT ?, ?";
         if (dbConnection()){
@@ -404,12 +402,12 @@ public class DatabaseConnection {
             ps.setInt(3, count);
             rs = ps.executeQuery();
 
-            List list = new ArrayList();
+            List<Object> list = new ArrayList<>();
             ResultSetMetaData md = rs.getMetaData();
             int column = md.getColumnCount();
             while (rs.next()){
-                HashMap hashMap = new HashMap();
-                HashMap metaDataMap = new HashMap();
+                HashMap<String, Object> hashMap = new HashMap<>();
+                HashMap<String, Object> metaDataMap = new HashMap<>();
                 for (int i=1; i<=column;++i){
                     String columnName = md.getColumnName(i);
                     if (columnName.contains("Count") || columnName.contains("Time")){
@@ -425,26 +423,6 @@ public class DatabaseConnection {
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    public boolean setChoice(int userID, int questionID, int choice){//TODO: eger aynisi yoksa yaz yoksa ustune yaz//TODO:liste cevir error mesajlarini belirlemek icin
-        String SET_CHOICE_QUERY = "INSERT INTO `answers`(`userID`, `questionID`, `choice`) VALUES ((SELECT users.ID from users WHERE users.ID = ?)," +
-                "(SELECT questions.ID from questions WHERE questions.ID = ?), ?)";
-        PreparedStatement ps;
-        if (dbConnection()){
-            return false;
-        }
-
-        int result = 0;
-        try {
-            ps = conn.prepareStatement(SET_CHOICE_QUERY);
-            ps.setInt(1, userID);
-            ps.setInt(2, questionID);
-            ps.setInt(3, choice);
-            result = ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
         } finally { //connection close
             if(conn != null){
                 try {
@@ -455,10 +433,39 @@ public class DatabaseConnection {
                 }
             }
         }
-        if (result == 1){
-            return true;
+    }
+
+    public String setChoice(int userID, int questionID, int choice){
+        String SET_CHOICE_QUERY = "INSERT INTO `answers`(`userID`, `questionID`, `choice`) VALUES ((SELECT users.ID from users WHERE users.ID = ?)," +
+                "(SELECT questions.ID from questions WHERE questions.ID = ?), ?)";
+        PreparedStatement ps;
+        if (dbConnection()){
+            return "SQL connection error.";
         }
-        return false;
+
+        int result;
+        try {
+            ps = conn.prepareStatement(SET_CHOICE_QUERY);
+            ps.setInt(1, userID);
+            ps.setInt(2, questionID);
+            ps.setInt(3, choice);
+            result = ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "SQL error!";
+        } finally { //connection close
+            if(conn != null){
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        if (result == 1){
+            return SUCCESS;
+        }
+        return "Choice could not set.";
     }
 
     public int getChoice(int userID, int questionID){
@@ -481,13 +488,13 @@ public class DatabaseConnection {
 
     }
 
-    public boolean createComment(int userID, int questionID, String emoji, String comment){//TODO:liste cevir
+    public String createComment(int userID, int questionID, String emoji, String comment){//TODO:liste cevir
         String CREATE_COMMENT_QUERY = "INSERT INTO `comments`(`userID`, `questionID`, `commentEmoji`, `commentText`)" +
                 " VALUES ((SELECT users.ID FROM users WHERE users.ID = ?)," +
                 "?, ?, ?)";
         String QUESTION_ID_CHECK_QUERY = "SELECT `questions`.`ID` FROM `questions` WHERE `questions`.`ID` = ?";
         if (dbConnection()){
-            return false;
+            return "SQL connection error.";
         }
         PreparedStatement ps;
         PreparedStatement ps2;
@@ -497,17 +504,17 @@ public class DatabaseConnection {
             ps.setInt(1, questionID);
             rs = ps.executeQuery();
             if (!rs.next())
-                return false;
+                return "Question not found.";
 
             ps2 = conn.prepareStatement(CREATE_COMMENT_QUERY);
             ps2.setInt(1, userID);
             ps2.setInt(2, questionID);
             ps2.setString(3, emoji);
             ps2.setString(4, comment);
-            return ps2.executeUpdate() != 0;
+            return (ps2.executeUpdate() == 0) ? "Could not create comment": SUCCESS;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+            return "SQL error!";
         } finally { //connection close
             if(conn != null){
                 try {
@@ -519,7 +526,7 @@ public class DatabaseConnection {
         }
     }
 
-    public List getCommentsForQuestion(int questionID, int offset, int count){
+    public List<Object> getCommentsForQuestion(int questionID, int offset, int count){
         //String COMMENTS_FOR_QUESTION = "SELECT `ID`, `userID`, `questionID`, `commentEmoji`, `commentText`," +
           //      " `creationTime`, `likeCount`, `dislikeCount` FROM `comments` WHERE `questionID` = ? LIMIT ?, ?";
         String COMMENTS_FOR_QUESTION = "SELECT comments.*, users.username, users.avatar FROM `comments` " +
@@ -574,8 +581,8 @@ public class DatabaseConnection {
 
     }
 
-    public HashMap<String,String> getUserByID(int userID){
-        String GET_USER_BY_ID_QUERY = "SELECT `ID`, `username`, `avatar`, `creationTime`, `hasPermission` FROM `users` WHERE `ID` = ? ";
+    public HashMap<String,Object> getUserByID(int userID){
+        String GET_USER_BY_ID_QUERY = "SELECT `ID`, `email`, `phonenumber`, `username`, `avatar`, `creationTime`, `hasPermission` FROM `users` WHERE `ID` = ? ";
         if (dbConnection()){
             return null;
         }
@@ -589,10 +596,10 @@ public class DatabaseConnection {
 
             ResultSetMetaData md = rs.getMetaData();
             int columns = md.getColumnCount();
-            HashMap<String, String> hashMap = new HashMap<>(columns);
+            HashMap<String, Object> hashMap = new HashMap<>(columns);
             if (rs.next())
                 for (int i=1; i<=columns; ++i){
-                    hashMap.put(md.getColumnName(i), rs.getString(i));
+                    hashMap.put(md.getColumnName(i), rs.getObject(i));
                 }
             return hashMap;
         } catch (SQLException e) {

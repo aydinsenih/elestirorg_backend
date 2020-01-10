@@ -51,8 +51,8 @@ Params: "count"(not required), "offset"(not required).
 
 Returns:  JSON with "status", "data" and "message"(if error occurred).
 
-/user/{userid} method GET
-Params: none
+/user/{userid} method GET or POST
+Params: "token"(not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).
 

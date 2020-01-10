@@ -7,16 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 
 public class ResponseBodyController {
-    //Object returnBody;
     HashMap<String, Object> mBody = new HashMap<>();
     public final int FAILED = 0;
     public final int SUCCESS = 1;
 
-    public ResponseBodyController(HashMap<String, String> hmBody) {
+    public ResponseBodyController(HashMap<String, Object> hmBody) {
         this.mBody.put("data", hmBody);
-        //this.returnBody = mBody;
     }
-    public ResponseBodyController(List<HashMap<String,Object>> lBody){
+    public ResponseBodyController(List<Object> lBody){
         this.mBody.put("data", lBody);
     }
     public ResponseBodyController(){
