@@ -2,28 +2,30 @@
 elestirorg API v0.1
 
 /login  method POST
-Params : "username", "password".
+Body : "username", "password".
 
 Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /signup method POST
-Params : "email", "username", "password", "phoneNumber".
+Body : "email", "username", "password", "phoneNumber".
 
 Returns : JSON with "status" and "message"(if error occurred).
 
 /isloggedin method POST
-Params : "token"
+Header : "AuthToken"
 
 Returns : JSON with "status" and "message"(if error occurred).
 
-/getquestions method GET
-Params : "count"(not required), "offset"(not required), "token"
-With "token" return contains user\`s previous answers for each question("choice" in "data").
+/getquestions method POST
+Body : "count"(not required), "offset"(not required)
+Header : "AuthToken"
+With "AuthToken" return contains user\`s previous answers for each question("choice" in "data").
 
 Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /createquestion method POST
-Params : "token", "question" , "category" , "answers".
+Body : "question" , "category" , "answers".
+Header : "AuthToken"
 
 "answers" must be an array
  "answers" answers count must be between 2 and 5 (2 and 5 include).
@@ -34,39 +36,42 @@ Params : "token", "question" , "category" , "answers".
 Returns : "status" and "message"(if error occurred).
 
 /setchoice method POST
-Params: "token", "questionID", "choice"
+Body: "questionID", "choice"
+Header : "AuthToken"
 "questionID" must be valid.
 "choice"(integer) must be between 1 and 5 (1 and 5 include).
 
 Returns : JSON with "status", "data" and "message"(if error occurred).
 
 /createcomment method POST
-Params: "token", "questionID", "comment", "emoji".
+Body: "questionID", "comment", "emoji".
+Header : "AuthToken"
 "questionID" must be valid.
 
 Returns : JSON with "status", "message"(if error occurred).
 
 /getcomments/{questionid} method GET
-Params: "count"(not required), "offset"(not required).
+Body: "count"(not required), "offset"(not required).
 
 Returns:  JSON with "status", "data" and "message"(if error occurred).
 
 /user/{userid} method GET or POST
-Params: "token"(not required).
+Body: 
+Header : "AuthToken"(not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).
 
 /getquestionsbyuserid/{userid} method GET
-Params: "offset"(not required) and "count"(not required).
+Body: "offset"(not required) and "count"(not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).
 
 /getcommentsbyuserid/{userid} method GET
-Params: "offset"(not required) and "count"(not required).
+Body: "offset"(not required) and "count"(not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).
 
 /question/{questionid} method POST or GET
-Params: "token" (with "token" method must be POST. not required).
+Header : "AuthToken" (with "AuthToken" method must be POST. not required).
 
 Returns: Json with "status", "data" and "message"(if error occurred).

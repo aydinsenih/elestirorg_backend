@@ -11,18 +11,17 @@ public class ResponseBodyController {
     public final int FAILED = 0;
     public final int SUCCESS = 1;
 
-    public ResponseBodyController(HashMap<String, Object> hmBody) {
-        this.mBody.put("data", hmBody);
+    public ResponseBodyController(String name, HashMap<String, Object> hmBody) {
+        this.mBody.put(name, hmBody);
     }
-    public ResponseBodyController(List<Object> lBody){
-        this.mBody.put("data", lBody);
+    public ResponseBodyController(String name, List<Object> lBody){
+        this.mBody.put(name, lBody);
     }
     public ResponseBodyController(){
 
     }
 
-    public void setStatusAndMessage(int status, String message){
-        setStatus(status);
+    public void setStatusAndMessage(String message){
         setMessage(message);
     }
 

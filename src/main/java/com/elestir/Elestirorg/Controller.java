@@ -4,7 +4,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import jnr.ffi.annotations.In;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,10 +16,15 @@ import io.jsonwebtoken.security.Keys;
 
 @RestController
 public class Controller {
-    String secretkey = System.getenv("secret");
+
+    private final String secretkey = System.getenv("secret");
     private final Key key = Keys.hmacShaKeyFor(secretkey.getBytes());//Keys.secretKeyFor(SignatureAlgorithm.HS512);//https://stackoverflow.com/questions/40252903/static-secret-as-byte-key-or-string
     private final String prefix = "Bearer ";
     private final String issuer = "elestir.org";
+    private final String userString = "user";
+    private final String commentsString = "comments";
+    private final String questionsString = "questions";
+
 
     private String createToken(String username, int userID, String email){
         String jws = Jwts.builder()
@@ -79,10 +85,10 @@ public class Controller {
         DatabaseConnection conn = new DatabaseConnection();
         HashMap<String,Object> resultMap = conn.login(username,password);
         if (resultMap == null){    //when sql connection error.
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL connection error."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL connection error."));
         }
         if(resultMap.isEmpty()){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Email or Password incorrect."));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(getErrorResponseAsJSON("Email or Password incorrect."));
         }
 
         String newToken;
@@ -92,7 +98,7 @@ public class Controller {
                     ,resultMap.get("email").toString());
             String updateTokenResult = conn.updateTokenForUser(resultMap.get("username").toString(),newToken);
             if (!updateTokenResult.equals(conn.SUCCESS)){
-                return ResponseEntity.ok().body(getErrorResponseAsJSON("Token could not updated."));
+                return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Token could not updated."));
             }
             resultMap.put("token", newToken);
         }
@@ -100,7 +106,7 @@ public class Controller {
         HashMap<String, Object> rHashMap = new HashMap<>();
         rHashMap.put("token", resultMap.get("token"));
         rHashMap.put("userID" , resultMap.get("ID"));
-        ResponseBodyController rbc = new ResponseBodyController(rHashMap);
+        ResponseBodyController rbc = new ResponseBodyController(userString, rHashMap);
         rbc.setStatus(rbc.SUCCESS);
         rbc.setMessage("login success");
         return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
@@ -136,7 +142,7 @@ public class Controller {
             rbc.setMessage("sign-up success");
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON(result));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON(result));
     }
 
     @RequestMapping(value = "/isloggedin", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
@@ -149,7 +155,7 @@ public class Controller {
         Claims claims = validateToken(token);
 
         if(claims == null){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("token not valid."));
         }
         else{
             ResponseBodyController rbc = new ResponseBodyController();
@@ -159,12 +165,13 @@ public class Controller {
     }
 
     @RequestMapping(value = "/createquestion", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
-    public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, Object> payload){
+    public ResponseEntity<String> createQuestion(@RequestBody(required = false) HashMap<String, Object> payload,
+                                                 @RequestHeader(value = "AuthToken") String token){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
 
-        String token = (payload.get("token") instanceof String) ? payload.get("token").toString() : null;
+        //String token = (token instanceof String) ? payload.get("token").toString() : null;
         String question = (payload.get("question") instanceof String) ? payload.get("question").toString() : null;
         String category = (payload.get("category") instanceof String) ? payload.get("category").toString() : null;
         Object answers = payload.get("answers");
@@ -199,13 +206,17 @@ public class Controller {
             }
         }
 
-        if(token == null || question == null || answer1 == null || answer2 == null || category == null){
+//        if(token == null){
+//            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing Token."));
+//        }
+
+        if(question == null || answer1 == null || answer2 == null || category == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Missing data."));
         }
 
         Claims claims = validateToken(token);
         if (claims == null){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("token not valid."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("token not valid."));
         }
 
         int userID = Integer.parseInt(claims.get("userID").toString());
@@ -216,20 +227,20 @@ public class Controller {
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not create question."));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Unexpected error! Could not create question."));
     }
 
     @RequestMapping(value = "/getquestions", method = RequestMethod.POST, produces = "application/json")
-    public ResponseEntity<String> getQuestions(@RequestBody(required = false) HashMap<String,Object> payload){
+    public ResponseEntity<String> getQuestions(@RequestBody(required = false) HashMap<String,Object> payload,
+                                               @RequestHeader(value = "AuthToken", required = false) String token){
 
-        String token;
+
         int count = 5;
         int offset = 0;
         int userID = 0;
         Claims claims;
 
         if (payload != null){
-            token = (payload.get("token") instanceof String) ? payload.get("token").toString() : null;
             if(token != null){
                 claims = validateToken(token);
                 if (claims != null){
@@ -245,28 +256,29 @@ public class Controller {
         }
 
         if(count > 20){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Cannot return more than 20 questions."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Cannot return more than 20 questions."));
         }
 
         DatabaseConnection conn = new DatabaseConnection();
         List<Object> resultList = conn.getQuestions(offset, count, userID);
 
         if (resultList != null) {
-            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            ResponseBodyController rbc = new ResponseBodyController(questionsString, resultList);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
     @RequestMapping(value = "/setchoice", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
-    public ResponseEntity<String> setChoice(@RequestBody(required = false) HashMap<String, String> payload){
+    public ResponseEntity<String> setChoice(@RequestBody(required = false) HashMap<String, String> payload,
+                                            @RequestHeader(value = "AuthToken") String token){
 
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
 
-        String token = payload.get("token");
+        //String token = payload.get("token");
         String sQuestionID = payload.get("questionID");
         String sChoice = payload.get("choice");
 
@@ -276,7 +288,7 @@ public class Controller {
 
         Claims claims = validateToken(token);
         if(claims == null){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Token not valid."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Token not valid."));
         }
 
         int userID;
@@ -288,7 +300,7 @@ public class Controller {
             choice = Integer.parseInt(payload.get("choice"));
         } catch (NumberFormatException e) {
             e.printStackTrace();
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Invalid data."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid data."));
         }
 
         if (choice > 5 || choice < 1){
@@ -302,17 +314,18 @@ public class Controller {
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("Unexpected error! Could not set choice."));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Unexpected error! Could not set choice."));
 
     }
 
     @RequestMapping(value = "/createcomment", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
-    public ResponseEntity<String> createComment(@RequestBody(required = false) HashMap<String,String> payload){
+    public ResponseEntity<String> createComment(@RequestBody(required = false) HashMap<String,String> payload,
+                                                @RequestHeader(value = "AuthToken") String token){
         if (payload == null){
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("No data received."));
         }
 
-        String token = payload.get("token");
+        //String token = payload.get("token");
         String qID = payload.get("questionID");
         String cText = payload.get("comment");
         String cEmoji = payload.get("emoji");
@@ -325,14 +338,14 @@ public class Controller {
 
         Claims claims = validateToken(token);
         if(claims == null){
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Token not valid."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Token not valid."));
         }
         try {
             userID = Integer.parseInt(claims.get("userID").toString());
             questionID = Integer.parseInt(qID);
         } catch (NumberFormatException e) {
             e.printStackTrace();
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Invalid data."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid data."));
         }
 
 
@@ -342,7 +355,7 @@ public class Controller {
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
 
     }
 
@@ -363,16 +376,16 @@ public class Controller {
         DatabaseConnection conn = new DatabaseConnection();
         List<Object> result = conn.getCommentsForQuestion(questionID, offset, count);
         if (result != null){
-            ResponseBodyController rbc = new ResponseBodyController(result);
+            ResponseBodyController rbc = new ResponseBodyController(commentsString, result);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
     @RequestMapping(value = "/user/{id}", produces = "application/json", consumes = "application/json")
     public ResponseEntity<String> getUserByID(@PathVariable(value = "id", required = false)String sUserID,
-                                              @RequestBody(required = false)HashMap<String, String> payload){
+                                              @RequestHeader(value = "AuthToken", required = false) String token){
         int userID;
         try {
             userID = Integer.parseInt(sUserID);
@@ -384,25 +397,23 @@ public class Controller {
         HashMap<String, Object> resultList = conn.getUserByID(userID);
         if (resultList != null){
             if (!resultList.isEmpty()){
-                if (payload != null && payload.get("token") != null){
-                    Claims claims = validateToken(payload.get("token"));
-                    if (claims != null){
-                        if (Integer.parseInt(claims.get("userID").toString()) == userID){
-                            ResponseBodyController rbc = new ResponseBodyController(resultList);
-                            rbc.setStatus(rbc.SUCCESS);
-                            return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
-                        }
+                Claims claims = validateToken(token);
+                if (claims != null){
+                    if (Integer.parseInt(claims.get("userID").toString()) == userID){
+                        ResponseBodyController rbc = new ResponseBodyController(userString, resultList);
+                        rbc.setStatus(rbc.SUCCESS);
+                        return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
                     }
                 }
                 resultList.remove("email");
                 resultList.remove("phoneNumber");
-                ResponseBodyController rbc = new ResponseBodyController(resultList);
+                ResponseBodyController rbc = new ResponseBodyController(userString, resultList);
                 rbc.setStatus(rbc.SUCCESS);
                 return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
             }
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("User ID not found."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("User not found."));
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
     @RequestMapping(value = "/getquestionsbyuserid/{id}", method = RequestMethod.GET, produces = "application/json")
@@ -420,15 +431,15 @@ public class Controller {
         }
 
         if (count > 20)
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Cannot return more than 20 questions."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Cannot return more than 20 questions."));
         DatabaseConnection conn = new DatabaseConnection();
         List<Object> resultList = conn.getQuestionsByUserID(userID, offset, count);
         if (resultList != null){
-            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            ResponseBodyController rbc = new ResponseBodyController(questionsString, resultList);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
     @RequestMapping(value = "/getcommentsbyuserid/{id}", method = RequestMethod.GET, produces = "application/json")
@@ -446,20 +457,21 @@ public class Controller {
         }
 
         if (count > 20)
-            return ResponseEntity.ok().body(getErrorResponseAsJSON("Cannot return more than 20 comments."));
+            return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Cannot return more than 20 comments."));
         DatabaseConnection conn = new DatabaseConnection();
         List<Object> resultList = conn.getCommentsByUserID(userID, offset, count);
         if (resultList != null){
-            ResponseBodyController rbc = new ResponseBodyController(resultList);
+            ResponseBodyController rbc = new ResponseBodyController(commentsString, resultList);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
     @RequestMapping(value = "/question/{id}", consumes = "application/json", produces = "application/json")
     public ResponseEntity<String> getQuestionByQuestionID(@PathVariable(value = "id", required = false)String sQuestionID,
-                                                           @RequestBody(required = false)HashMap<String, String> payload){
+                                                          @RequestBody(required = false) HashMap<String, String> payload,
+                                                          @RequestHeader(value = "AuthToken", required = false) String token){
         int questionID;
         try {
             questionID = Integer.parseInt(sQuestionID);
@@ -468,23 +480,23 @@ public class Controller {
             return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid data."));
         }
         HashMap<String, Object> hashMap;
-        if (payload != null && payload.get("token") != null){
-            Claims claims = validateToken(payload.get("token"));
+        if (token != null){
+            Claims claims = validateToken(token);
             if (claims != null){
                 DatabaseConnection conn = new DatabaseConnection();
                 hashMap = conn.getQuestionByQuestionID(questionID, Integer.parseInt(claims.get("userID").toString()));
             }
-            else return ResponseEntity.ok().body(getErrorResponseAsJSON("Invalid token."));
+            else return ResponseEntity.badRequest().body(getErrorResponseAsJSON("Invalid token."));
         } else {
             DatabaseConnection conn = new DatabaseConnection();
             hashMap = conn.getQuestionByQuestionID(questionID, 0);
         }
         if (hashMap != null){
-            ResponseBodyController rbc = new ResponseBodyController(hashMap);
+            ResponseBodyController rbc = new ResponseBodyController(questionsString, hashMap);
             rbc.setStatus(rbc.SUCCESS);
             return ResponseEntity.ok().body(rbc.getResponseBodyAsJson());
         }
-        return ResponseEntity.ok().body(getErrorResponseAsJSON("SQL error!"));
+        return ResponseEntity.badRequest().body(getErrorResponseAsJSON("SQL error!"));
     }
 
 }

@@ -616,4 +616,23 @@ public class DatabaseConnection {
         }
 
     }
+
+    public String setQuestionLike(int userID, int questionID, int choice){
+        String SET_LIKE_FOR_QUESTION = "INSERT INTO `questionlikes`(`questionID`, `userID`, `likeORdislike`) VALUES ((select ID from questions where ID= ?),(select ID from users where ID = ?), ?/* extra bir tablo ile degerler belirlenebilir*/ )";
+        if (dbConnection()){
+            return "SQL error!";
+        }
+        return null;
+//        PreparedStatement ps;
+//
+//        try {
+//            ps = conn.prepareStatement(SET_LIKE_FOR_QUESTION);
+//            ps.setInt(1, questionID);
+//            ps.setInt(2, userID);
+//            ps.setInt(3, choice);
+//
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+    }
 }
